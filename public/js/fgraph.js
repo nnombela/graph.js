@@ -255,7 +255,7 @@
         }
     });
 
-    var LinkFractal = {
+    var LinkFractality = {
         initialize: function() {
             this._down = null;
             this._inverse = null;
@@ -279,8 +279,8 @@
         }
     };
 
-    var FracLink = inherits(Link, LinkFractal);
-    var FracDiLink = inherits(DiLink, LinkFractal);
+    var FracLink = inherits(Link, LinkFractality);
+    var FracDiLink = inherits(DiLink, LinkFractality);
 
 
 // -------------- Links
@@ -296,21 +296,16 @@
             Direction: Direction
         },
 
-        initialize: function(direction) {
-            this._direction = direction;
-        },
-
         reverse: function() {
-            return this._reverse;
+            return this._owner.links(this.direction().reverse());
         },
-
 
         direction: function() {
-            return this._dirction;
+            return this._owner.links(Direction['in']) === this? Direction['in'] : Direction['out'];
         }
     });
 
-    var LinksFractal = {
+    var LinksFractality = {
         inverse: function(direction) {
             return this._owner.inverse().links(direction);
         },
@@ -320,8 +315,8 @@
         }
     };
 
-    var FracLinks = inherits(Links, LinksFractal);
-    var FracDiLinks = inherits(DiLinks, LinksFractal);
+    var FracLinks = inherits(Links, LinksFractality);
+    var FracDiLinks = inherits(DiLinks, LinksFractality);
 
 
 // --------------- Node
@@ -343,50 +338,69 @@
 
     var DiNode = inherits(Node, {
         initialize: function() {
-            var left = new DiLinks(this), right = new DiLinks(this);
-            left.bindReverse(right);
-            this._links = new DuoGraphContainer(left, right);
+            this._links = new DuoGraphContainer(new DiLinks(this), new DiLinks(this));
         },
         links: function(direction) {
             return direction? this._links.container(direction) : this._links;
         }
     });
 
-    var Dual = {
-        statics: {
-            Duality: Duality
-        },
 
+    var NodeFractality = {
         initialize: function() {
-            this._dual = null;
+            this._inverse = null;
+            this._down = null;
+            this._up = null;
         },
-
-        dual: function() {
-            return this._dual;
+        inverse: function() {
+            return this._inverse;
         },
-
-        duality: function() {
-            return this._owner.direction();
+        down: function() {
+            return this._down;
+        },
+        up: function() {
+            return this._up;
         }
     };
 
-    var DualNode = inherits(Node, {
+    var NodeDuality = {
+        statics: {
+            Duality: Duality
+        },
+        duality: function() {
+            return this._owner.duality();
+        }
+    };
 
-    });
+    var DualNode = inherits(Node, NodeDuality);
+
+    var DualDiNode = inherits(DiNode, NodeDuality);
+
+    var FracDiNode = inherits(DiNode, NodeFractality);
+
+    var FracDualDiNode = inherits(DualDiNode, NodeFractality);
+
 
 // ---------------- Nodes
 
     var Nodes = inherits(GraphContainer, {
-        initialize: function() {
-        },
         type: function() {
             return Types.nodes;
-        },
-
-
+        }
     });
 
+    var DualNodes = inherits(Nodes, {
+        statics: {
+            Duality: Duality
+        },
 
+        dual: function() {
+            return this._owner.nodes(duality().dual());
+        },
+        duality: function() {
+            return this._owner.nodes(Duality.hvert)? Duality.hvert : Duality.hedge;
+        }
+    });
 
 
 // ----------------- Graph
@@ -397,11 +411,35 @@
         type: function() {
             return Types.graph;
         },
-        nodes: function(duality) {
-
-        },
-
+        nodes: function() {
+            return this._nodes;
+        }
     });
+
+    var DualGraph = inherits(Graph, {
+        initialize: function() {
+            this._nodes = new DuoGraphContainer(new DualNodes(this), new DualNodes(this));
+        },
+        nodes: function(duality) {
+            return duality? this._nodes.container(duality) : this._nodes;
+        }
+    });
+
+    var GraphFractality = {
+        initialize: function() {
+            this._up = null;
+        },
+        up: function() {
+            return this._up;
+        },
+        next: function() {
+            return this._up.graph();
+        }
+    };
+
+    var FracGraph = inherits(Graph, GraphFractality);
+
+    var FracDualGraph = inherits(DualGraph, GraphFractality);
 
 
 // ----------------- Graph Factory
