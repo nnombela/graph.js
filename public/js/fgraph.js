@@ -1,51 +1,68 @@
 (function() {
     var root = this;
 
-    var NOT_IMPLEMENTED_ERROR_FUNC = function() {
-        throw new Error("Not implemented");
-    };
+    var Types = enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
+        children: function() {
+            return Types.values[Types.values.indexOf(this) + 1];
+        }
+    });
+
+    var Direction = enumeration(['in', 'out'], {
+        reverse: function() {
+            return this === Direction['in']? Direction['out'] : Direction['out'];
+        }
+    });
+
+    var Duality =  enumeration(['hvert', 'hedge'], {
+        dual: function() {
+            return this === Duality['hvert']? Duality['hedge'] : Duality['hvert'];
+        }
+    });
+
 
     var GraphObject = inherits(Object, {
-        staticProperties: {
-            Types: enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
-                children: function() {
-                    var values = this.constructor.values;
-                    return values[values.indexOf(this) + 1];
-                }
-            })
+        statics: {
+            Types: Types
         },
 
         initialize: function(owner, label) {
-            this.owner = owner;
+            this._owner = owner;
             if (label !== undefined) {
                 this._label = label;
             }
         },
 
-        type: NOT_IMPLEMENTED_ERROR_FUNC,
+        type: function() {
+            return this._owner.children();
+        },
 
         factory: function() {
-            return this.owner.factory();
+            return this._owner.factory();
         },
         label: function() {
-            return this._label !== undefined? this._label : this.owner?
-                    this.owner.label() + '::' + this.type().val() + ':' + this.index() : '';
+            return this._label !== undefined? this._label : this._owner?
+                    this._owner.label() + '::' + this.type().val() + ':' + this.index() : this.type().val();
         },
         index: function() {
-            return this.owner? this.owner.indexOf(this) : -1;
+            return this._owner? this._owner.indexOf(this) : -1;
         },
         belongsTo: function(type) {
-            return type === undefined || this.type() === type? this : this.owner.belongsTo(type);
+            return type === undefined || this.type() === type? this : this._owner.belongsTo(type);
         },
         free: function() {
-            this.owner.free(this);
+            this._owner.free(this);
             return this;
         }
     });
 
     var GraphContainer = inherits(GraphObject, {
+        initialize: function() {
+            this.children = [];
+        },
+
         Accessor: inherits(Object, {
-            initialize: function(length) {
+            initialize: function(container) {
+                this.container = container;
                 this.obj = {};
             },
             get: function(gobj) {
@@ -56,27 +73,24 @@
             }
         }),
         Iterator: inherits(Object, {
-            initialize: function(array) {
-                this.array = array;
+            initialize: function(container) {
+                this.container = container;
                 this.cursor = -1;
             },
             current: function() {
-                return this.children[this.cursor];
+                return this.container.get(this.cursor);
             },
             next: function() {
-                return this.children[++this.cursor];
+                return this.container.get(++this.cursor);
             },
             hasNext: function() {
-                return this.cursor + 1 < this.array.length;
+                return this.cursor + 1 < this.container.size();
             },
             index: function() {
                 return this.cursor;
             }
         }),
 
-        initialize: function() {
-            this.children = [];
-        },
         get: function(index) {
             return this.children[index];
         },
@@ -84,10 +98,10 @@
             return this.children.length;
         },
         iterator: function() {
-            return new this.Iterator(this.children);
+            return new this.Iterator(this);
         },
         accessor: function() {
-            return new this.Accessor(this.children.length);
+            return new this.Accessor(this);
         },
         forEach: function(func) {
             this.children.forEach(func);
@@ -104,7 +118,7 @@
         },
         add: function(gobj) {
             if (this.type().children() === gobj.type()) {
-                gobj.owner = this;
+                gobj._owner = this;
                 this.children.push(gobj);
                 return this;
             } else {
@@ -119,10 +133,62 @@
             if (idx !== -1) {
                 this.children.splice(idx, 1);
             }
-            return this;
+            return idx;
         },
         free: function(gobj) {
-            return gobj? this.remove(gobj) : this.super_.free();
+            return gobj? this.remove(gobj) : GraphObject.super_.free.call();
+        }
+    });
+
+    var DuoGraphContainer = inherits(GraphContainer, {
+        initialize: function(left, right) {
+            this._left = left;
+            this._right = right;
+            this._containers = [left, right];
+        },
+        container: function(enumerated) {
+            return this._containers[enumerated.idx()];
+        },
+        get: function(index) {
+            var leftSize = this._left.size();
+            return index < leftSize? this._left.get(index) : this._right.get(index - leftSize);
+        },
+        indexOf: function(gobj) {
+            var leftIndexOf = this._left.indexOf(gobj);
+            return leftIndexOf === -1? leftIndexOf : this._right.indexOf(gobj);
+        },
+        forEach: function(func) {
+            this._left.forEach(func);
+            this._right.forEach(func);
+            return this;
+        },
+        find: function(func) {
+            var result = this._left.find(func);
+            return result? result : this._right.find(func);
+
+        },
+        size: function() {
+            return this._left.size() + this._right.size();
+        },
+        add: function(gobj, enumerated) {
+            return this.container(enumerated).add(gobj);
+        },
+        addNew: function(enumerated) {
+            return enumerated? this.container(enumerated).addNew() : this._left.addNew();
+        },
+        remove: function(gobj, enumerated) {
+            if (enumerated) {
+                return this.container(enumerated).remove(gobj);
+            } else {
+                var idx = this._left.remove(gobj);
+                return idx !== -1? idx : this._right.remove(gobj);
+            }
+        },
+        free: function() {
+            GraphContainer.super_.free.call(this);
+            this._left.free();
+            this._right.free();
+            return this;
         }
     });
 
@@ -133,7 +199,7 @@
         },
 
         type: function() {
-            return GraphObject.Types.link;
+            return Types.link;
         },
         bind: function(pair) {
             _bind('_pair', this._pair);
@@ -142,7 +208,7 @@
             _unbind('_pair', this._pair)
         },
         node: function() {
-            return this.owner.owner;
+            return this._owner._owner;
         },
         to: function() {
             return this._pair.node();
@@ -165,14 +231,9 @@
         }
     });
 
-    var Directed = {
-        staticProperties: {
-            Direction: enumeration(['in', 'out'], {
-                reverse: function() {
-                    var D = this.constructor;
-                    return this === D.in? D.out : D.in;
-                }
-            })
+    var DiLink = inherits(Link, {
+        statics: {
+            Direction: Direction
         },
 
         initialize: function() {
@@ -190,11 +251,11 @@
         },
 
         direction: function() {
-            return this.owner.direction();
+            return this._owner.direction();
         }
-    };
+    });
 
-    var Fractal = {
+    var LinkFractal = {
         initialize: function() {
             this._down = null;
             this._inverse = null;
@@ -214,45 +275,118 @@
             return this._down;
         },
         ordinal: function() {
-            return this.owner.ordinal();
+            return this._owner.ordinal();
         }
     };
 
-    var DiLink = inherits(Link, Directed);
-    var FracLink = inherits(Link, Fractal);
-    var FracDiLink = inherits(DiLink, Fractal);
+    var FracLink = inherits(Link, LinkFractal);
+    var FracDiLink = inherits(DiLink, LinkFractal);
 
 
 // -------------- Links
 
     var Links = inherits(GraphContainer, {
         type: function() {
-            return GraphObject.Types.links;
+            return Types.links;
         }
     });
 
-    var DiLinks = inherits(Links, Directed);
-    var FracLinks = inherits(Links, Fractal);
-    var FracDiLinks = inherits(DiLinks, Fractal);
+    var DiLinks = inherits(Links, {
+        statics: {
+            Direction: Direction
+        },
+
+        initialize: function(direction) {
+            this._direction = direction;
+        },
+
+        reverse: function() {
+            return this._reverse;
+        },
+
+
+        direction: function() {
+            return this._dirction;
+        }
+    });
+
+    var LinksFractal = {
+        inverse: function(direction) {
+            return this._owner.inverse().links(direction);
+        },
+
+        ordinal: function() {
+            return this._owner.ordinal();
+        }
+    };
+
+    var FracLinks = inherits(Links, LinksFractal);
+    var FracDiLinks = inherits(DiLinks, LinksFractal);
 
 
 // --------------- Node
 
     var Node = inherits(GraphObject, {
-        constructor: function() {
+        initialize: function() {
+            this._links = new Links(this);
         },
         type: function() {
-            return GraphObject.Types.node;
+            return Types.node;
+        },
+        graph: function() {
+            return this._owner._owner;
+        },
+        links: function() {
+            return this._links;
         }
+    });
+
+    var DiNode = inherits(Node, {
+        initialize: function() {
+            var left = new DiLinks(this), right = new DiLinks(this);
+            left.bindReverse(right);
+            this._links = new DuoGraphContainer(left, right);
+        },
+        links: function(direction) {
+            return direction? this._links.container(direction) : this._links;
+        }
+    });
+
+    var Dual = {
+        statics: {
+            Duality: Duality
+        },
+
+        initialize: function() {
+            this._dual = null;
+        },
+
+        dual: function() {
+            return this._dual;
+        },
+
+        duality: function() {
+            return this._owner.direction();
+        }
+    };
+
+    var DualNode = inherits(Node, {
+
     });
 
 // ---------------- Nodes
 
     var Nodes = inherits(GraphContainer, {
+        initialize: function() {
+        },
         type: function() {
-            return GraphObject.Types.nodes;
-        }
+            return Types.nodes;
+        },
+
+
     });
+
+
 
 
 // ----------------- Graph
@@ -261,11 +395,12 @@
             _nodes = new Nodes();
         },
         type: function() {
-            return GraphObject.Types.graph;
+            return Types.graph;
         },
         nodes: function(duality) {
 
-        }
+        },
+
     });
 
 
@@ -278,7 +413,10 @@
 
         getFactory: function(categories) {
             return {
-                Types: GraphObject.Types,
+                Types: Types,
+                Direction: Direction,
+                Duality: Duality,
+
                 Link: Link,
                 Links: Links,
                 Node: Node,
@@ -299,17 +437,23 @@
     }
 
     function inherits(Parent, props) {
-        var Child = function() {
-            Parent.apply(this, arguments);
-            if (props.hasOwnProperty('initialize')) {
-                return props.initialize.apply(this, arguments);
+        var Child = (function(){
+            if (props.hasOwnProperty('constructor')) {
+                return props.constructor;
+            } else {
+                return function() {
+                    Parent.apply(this, arguments);  // call Parent constructor
+                    if (props.hasOwnProperty('initialize')) { // then do initialization if necessary
+                        props.initialize.apply(this, arguments);
+                    }
+                };
             }
-        };
+        })();
 
         extend(Child, Parent); // copy static class properties from Parent
 
-        if (props.hasOwnProperty('staticProperties')) {   // Add new ones
-            extend(Child, props.staticProperties);
+        if (props.hasOwnProperty('statics')) {   // Add new ones
+            extend(Child, props.statics);
         }
 
         Child.Parent = Parent;
@@ -319,25 +463,32 @@
             constructor: { value: Child, enumerable: false }
         });
 
+        delete props.constructor;  // avoid copying constructor property
         extend(Child.prototype, props);
+        props.constructor = Child;  // restore or create default constructor property
 
         return Child;
     }
 
     function enumeration(array, props) {
         props = extend(props || {}, {
-            initialize: function(value) {
+            initialize: function(value, index) {
                 this.value = value;
+                this.index = index;
             },
             val: function() {
                 return this.value;
+            },
+            idx: function() {
+                return this.index;
             }
         });
 
         var Enum = inherits(Object, props);
 
+        var index = -1;
         Enum.values = array.map(function(elem) {
-            return Enum[elem] = new Enum(elem)
+            return Enum[elem] = new Enum(elem, ++index)
         });
         return Enum;
     }
