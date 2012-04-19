@@ -26,7 +26,7 @@
         },
 
         initialize: function(owner, label) {
-            this._owner = owner;
+            this._owner = owner? owner : null;
             if (label !== undefined) {
                 this._label = label;
             }
@@ -337,7 +337,8 @@
     });
 
     var DiNode = inherits(Node, {
-        initialize: function() {
+        constructor: function() {
+            GraphObject.constructor.call();
             this._links = new DuoGraphContainer(this, DiLinks);
         },
         links: function(direction) {
@@ -376,7 +377,11 @@
 
     var DualDiNode = inherits(DiNode, NodeDuality);
 
+    var FracNode = inherits(Node, NodeFractality);
+
     var FracDiNode = inherits(DiNode, NodeFractality);
+
+    var FracDualNode = inherits(DualNode, NodeFractality);
 
     var FracDualDiNode = inherits(DualDiNode, NodeFractality);
 
@@ -388,13 +393,6 @@
             return Types.nodes;
         }
     });
-
-    var DiNodes = inherits(GraphContainer, {
-        type: function() {
-            return Types.nodes;
-        }
-    });
-
 
     var DualNodes = inherits(Nodes, {
         statics: {
@@ -424,7 +422,8 @@
     });
 
     var DualGraph = inherits(Graph, {
-        initialize: function() {
+        constructor: function() {
+            GraphObject.constructor.call();
             this._nodes = new DuoGraphContainer(this, DualNodes);
         },
         nodes: function(duality) {
@@ -509,6 +508,42 @@
         Link: DiLink,
         Node: DiNode,
         Graph: Graph
+    });
+
+    GraphFactory.register({name: 'default', dual: true}, {
+        Link: Link,
+        Node: DualNode,
+        Graph: DualGraph
+    });
+
+    GraphFactory.register({name: 'default', fractal: true}, {
+        Link: FracLink,
+        Node: FracNode,
+        Graph: FracGraph
+    });
+
+    GraphFactory.register({name: 'default', directed:true, dual: true}, {
+        Link: DiLink,
+        Node: DualDiNode,
+        Graph: DualGraph
+    });
+
+    GraphFactory.register({name: 'default', directed:true, fractal: true}, {
+        Link: FracDiLink,
+        Node: FracDiNode,
+        Graph: FracGraph
+    });
+
+    GraphFactory.register({name: 'default', dual:true, fractal: true}, {
+        Link: FracLink,
+        Node: FracDualNode,
+        Graph: FracDualGraph
+    });
+
+    GraphFactory.register({name: 'default', directed: true, dual:true, fractal: true}, {
+        Link: FracDiLink,
+        Node: FracDualDiNode,
+        Graph: FracDualGraph
     });
 
 
