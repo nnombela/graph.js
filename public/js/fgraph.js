@@ -141,9 +141,9 @@
     });
 
     var DuoGraphContainer = inherits(GraphContainer, {
-        initialize: function(left, right) {
-            this._left = left;
-            this._right = right;
+        initialize: function(owner, Container) {
+            this._left = new Container(owner);
+            this._right = new Container(owner);
             this._containers = [left, right];
         },
         container: function(enumerated) {
@@ -338,7 +338,7 @@
 
     var DiNode = inherits(Node, {
         initialize: function() {
-            this._links = new DuoGraphContainer(new DiLinks(this), new DiLinks(this));
+            this._links = new DuoGraphContainer(this, DiLinks);
         },
         links: function(direction) {
             return direction? this._links.container(direction) : this._links;
@@ -389,6 +389,13 @@
         }
     });
 
+    var DiNodes = inherits(GraphContainer, {
+        type: function() {
+            return Types.nodes;
+        }
+    });
+
+
     var DualNodes = inherits(Nodes, {
         statics: {
             Duality: Duality
@@ -406,7 +413,7 @@
 // ----------------- Graph
     var Graph = inherits(GraphObject, {
         initialize: function() {
-            _nodes = new Nodes();
+            this._nodes = new Nodes();
         },
         type: function() {
             return Types.graph;
@@ -418,7 +425,7 @@
 
     var DualGraph = inherits(Graph, {
         initialize: function() {
-            this._nodes = new DuoGraphContainer(new DualNodes(this), new DualNodes(this));
+            this._nodes = new DuoGraphContainer(this, DualNodes);
         },
         nodes: function(duality) {
             return duality? this._nodes.container(duality) : this._nodes;
@@ -444,25 +451,65 @@
 
 // ----------------- Graph Factory
 
-    var GraphFactory =  {
+    var GraphFactoryProps = {
         VERSION: '0.1',
-
-        Categories: enumeration(['directed', 'dual', 'fractal']),
-
-        getFactory: function(categories) {
-            return {
-                Types: Types,
-                Direction: Direction,
-                Duality: Duality,
-
-                Link: Link,
-                Links: Links,
-                Node: Node,
-                Nodes: Nodes,
-                Graph: Graph
-            }
-        }
+        Config: enumeration(['directed', 'dual', 'fractal']),
+        Types: Types,
+        Direction: Direction,
+        Duality: Duality
     };
+
+    var GraphFactory = inherits(Object, {
+        statics: {
+            VERSION: '0.1',
+
+            Config: enumeration(['directed', 'dual', 'fractal']),
+
+            register: function(config, props) {
+                var factory = new GraphFactory(config, props);
+                GraphFactory[factory.name] = factory;
+                return factory;
+            },
+            getFactory: function(config) {
+                return GraphFactory[GraphFactory._configToKey(config)];
+            },
+            _configToName: function(config) {
+                var name = '_' + (config.name || 'default');
+                if (config.directed) {
+                    name += '_directed';
+                }
+                if (config.dual) {
+                    name += '_dual';
+                }
+                if (config.fractal) {
+                    name += '_fractal';
+                }
+                return name;
+            }
+        },
+
+        Types: Types,
+        Direction: Direction,
+        Duality: Duality,
+
+        constructor: function(config, props) {
+            this.config = config;
+            this.name = this._configToName(config);
+            extend(this, props);
+        }
+    });
+
+    GraphFactory.register({name: 'default'}, {
+        Link: Link,
+        Node: Node,
+        Graph: Graph
+    });
+
+    GraphFactory.register({name: 'default', directed: true}, {
+        Link: DiLink,
+        Node: DiNode,
+        Graph: Graph
+    });
 
 
     //-------- Helper functions
@@ -472,6 +519,10 @@
             dest[prop] = source[prop];
         }
         return dest;
+    }
+
+    function clone(obj) {
+        return extend({}, obj);
     }
 
     function inherits(Parent, props) {
