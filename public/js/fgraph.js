@@ -202,10 +202,10 @@
             return Types.link;
         },
         bind: function(pair) {
-            _bind('_pair', this._pair);
+            this._bind('_pair', this._pair);
         },
         unbind: function() {
-            _unbind('_pair', this._pair)
+            this._unbind('_pair', this._pair)
         },
         node: function() {
             return this._owner._owner;
@@ -244,10 +244,10 @@
             return this._reverse;
         },
         bindReverse: function(pair) {
-            _bind('_reverse', this._reverse);
+            this._bind('_reverse', this._reverse);
         },
         unbindReverse: function() {
-            _unbind('_reverse', this._reverse)
+            this._unbind('_reverse', this._reverse)
         },
 
         direction: function() {
@@ -265,10 +265,10 @@
             return this._inverse;
         },
         bindInverse: function(pair) {
-            _bind('_inverse', this._inverse);
+            this._bind('_inverse', this._inverse);
         },
         unbindInverse: function() {
-            _unbind('_inverse', this._inverse)
+            this._unbind('_inverse', this._inverse)
         },
 
         down: function() {
@@ -316,14 +316,17 @@
     };
 
     var FracLinks = inherits(Links, LinksFractality);
-    var FracDiLinks = inherits(DiLinks, LinksFractality);
 
+    var FracDiLinks = inherits(DiLinks, LinksFractality);
 
 // --------------- Node
 
     var Node = inherits(GraphObject, {
+        _createLinks: function() {
+            return new Links(this);
+        },
         initialize: function() {
-            this._links = new Links(this);
+            this._links = this._createLinks();
         },
         type: function() {
             return Types.node;
@@ -337,9 +340,8 @@
     });
 
     var DiNode = inherits(Node, {
-        constructor: function() {
-            GraphObject.constructor.call();
-            this._links = new DuoGraphContainer(this, DiLinks);
+        _createLinks: function() {
+            return new DuoGraphContainer(this, DiLinks);
         },
         links: function(direction) {
             return direction? this._links.container(direction) : this._links;
@@ -377,13 +379,29 @@
 
     var DualDiNode = inherits(DiNode, NodeDuality);
 
-    var FracNode = inherits(Node, NodeFractality);
+    var FracNode = inherits(Node, NodeFractality).extend({
+        _createLinks: function()  {
+            return new FracLinks(this);
+        }
+    });
 
-    var FracDiNode = inherits(DiNode, NodeFractality);
+    var FracDiNode = inherits(DiNode, NodeFractality).extend({
+        _createLinks: function()  {
+            return new DuoGraphContainer(this, FracDiLinks);
+        }
+    });
 
-    var FracDualNode = inherits(DualNode, NodeFractality);
+    var FracDualNode = inherits(DualNode, NodeFractality).extend({
+        _createLinks: function()  {
+            return new FracLinks(this);
+        }
+    });
 
-    var FracDualDiNode = inherits(DualDiNode, NodeFractality);
+    var FracDualDiNode = inherits(DualDiNode, NodeFractality).extend({
+        _createLinks: function()  {
+            return new DuoGraphContainer(this, FracDiLinks);
+        }
+    });
 
 
 // ---------------- Nodes
@@ -407,11 +425,24 @@
         }
     });
 
+    var NodesFractality = {
+        ordinal: function() {
+            return this._owner.ordinal();
+        }
+    };
+
+    var FracNodes = inherits(Nodes, NodesFractality);
+
+    var FracDualNodes = inherits(DualNodes, NodesFractality);
+
 
 // ----------------- Graph
     var Graph = inherits(GraphObject, {
+        createNodes: function() {
+            return new Nodes(this);
+        },
         initialize: function() {
-            this._nodes = new Nodes();
+            this._nodes = this.createNodes(arguments);
         },
         type: function() {
             return Types.graph;
@@ -422,9 +453,8 @@
     });
 
     var DualGraph = inherits(Graph, {
-        constructor: function() {
-            GraphObject.constructor.call();
-            this._nodes = new DuoGraphContainer(this, DualNodes);
+        createNodes: function() {
+            return new DuoGraphContainer(this, DualNodes);
         },
         nodes: function(duality) {
             return duality? this._nodes.container(duality) : this._nodes;
@@ -443,9 +473,17 @@
         }
     };
 
-    var FracGraph = inherits(Graph, GraphFractality);
+    var FracGraph = inherits(Graph, GraphFractality).extend({
+        createNodes: function() {
+            return new FracNodes(this);
+        }
+    });
 
-    var FracDualGraph = inherits(DualGraph, GraphFractality);
+    var FracDualGraph = inherits(DualGraph, GraphFractality).extend({
+        createNodes: function() {
+            return new DuoGraphContainer(this, FracDualNodes);
+        }
+    });
 
 
 // ----------------- Graph Factory
@@ -560,19 +598,29 @@
         return extend({}, obj);
     }
 
-    function inherits(Parent, props) {
-        var Child = (function(){
-            if (props.hasOwnProperty('constructor')) {
-                return props.constructor;
-            } else {
-                return function() {
-                    Parent.apply(this, arguments);  // call Parent constructor
-                    if (props.hasOwnProperty('initialize')) { // then do initialization if necessary
-                        props.initialize.apply(this, arguments);
-                    }
-                };
+    function extendIf(dest, source, test) {
+        for (var prop in source) {
+            if (test(prop)) {
+                dest[prop] = source[prop];
             }
-        })();
+        }
+        return dest;
+    }
+
+    function inherits(Parent, props) {
+        var constructor = props.hasOwnProperty('constructor')? props.constructor : undefined;
+        var initialize = props.hasOwnProperty('initialize')? props.initialize : undefined;
+
+        var Child = function() {
+            if (constructor) {
+                constructor.apply(this, arguments);
+            } else {
+                Parent.apply(this, arguments);  // call Parent r
+                if (initialize) { // then call initialization if exits
+                    initialize.apply(this, arguments);
+                }
+            }
+        };
 
         extend(Child, Parent); // copy static class properties from Parent
 
@@ -582,14 +630,17 @@
 
         Child.Parent = Parent;
         Child.super_= Parent.prototype;
+        Child.extend = function(props) {
+            return extend(Child.prototype, props);
+        };
 
         Child.prototype = Object.create(Parent.prototype, {
             constructor: { value: Child, enumerable: false }
         });
 
-        delete props.constructor;  // avoid copying constructor property
-        extend(Child.prototype, props);
-        props.constructor = Child;  // restore or create default constructor property
+        extendIf(Child.prototype, props, function(prop) {
+            return props.hasOwnProperty(prop) && prop !== 'constructor' && prop !== 'initialize';
+        });
 
         return Child;
     }
