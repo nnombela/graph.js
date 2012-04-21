@@ -141,53 +141,52 @@
     });
 
     var DuoGraphContainer = inherits(GraphContainer, {
-        initialize: function(owner, Container) {
-            this._left = new Container(owner);
-            this._right = new Container(owner);
-            this._containers = [left, right];
+        initialize: function(container0, container1) {
+            this['0'] = container0;
+            this['1'] = container1;
         },
-        container: function(enumerated) {
-            return this._containers[enumerated.idx()];
+        container: function(index) {
+            return this[index];
         },
         get: function(index) {
-            var leftSize = this._left.size();
-            return index < leftSize? this._left.get(index) : this._right.get(index - leftSize);
+            var size0 = this[0].size();
+            return index < size0? this[0].get(index) : this[1].get(index - size0);
         },
         indexOf: function(gobj) {
-            var leftIndexOf = this._left.indexOf(gobj);
-            return leftIndexOf === -1? leftIndexOf : this._right.indexOf(gobj);
+            var indexOf0 = this[0].indexOf(gobj);
+            return indexOf0 === -1? indexOf0 : this[1].indexOf(gobj);
         },
         forEach: function(func) {
-            this._left.forEach(func);
-            this._right.forEach(func);
+            this[0].forEach(func);
+            this[1].forEach(func);
             return this;
         },
         find: function(func) {
-            var result = this._left.find(func);
-            return result? result : this._right.find(func);
+            var result = this[0].find(func);
+            return result? result : this[1].find(func);
 
         },
         size: function() {
-            return this._left.size() + this._right.size();
+            return this[0].size() + this[1].size();
         },
-        add: function(gobj, enumerated) {
-            return this.container(enumerated).add(gobj);
+        add: function(gobj, index) {
+            return this[index].add(gobj);
         },
-        addNew: function(enumerated) {
-            return enumerated? this.container(enumerated).addNew() : this._left.addNew();
+        addNew: function(index) {
+            return index? this[index].addNew() : this[0].addNew();
         },
-        remove: function(gobj, enumerated) {
-            if (enumerated) {
-                return this.container(enumerated).remove(gobj);
+        remove: function(gobj, index) {
+            if (index) {
+                return this[index].remove(gobj);
             } else {
-                var idx = this._left.remove(gobj);
-                return idx !== -1? idx : this._right.remove(gobj);
+                var idx = this[0].remove(gobj);
+                return idx !== -1? idx : this[1].remove(gobj);
             }
         },
         free: function() {
             GraphContainer.super_.free.call(this);
-            this._left.free();
-            this._right.free();
+            this[0].free();
+            this[1].free();
             return this;
         }
     });
@@ -295,13 +294,18 @@
         statics: {
             Direction: Direction
         },
-
+        initialize: function(owner, direction) {
+            this._direction = direction;
+        },
+        index: function() {
+            this._direction.idx();
+        },
         reverse: function() {
-            return this._owner.links(this.direction().reverse());
+            return this._owner.links(this._direction.reverse());
         },
 
         direction: function() {
-            return this._owner.links(Direction['in']) === this? Direction['in'] : Direction['out'];
+            return this._direction;
         }
     });
 
@@ -341,7 +345,7 @@
 
     var DiNode = inherits(Node, {
         _createLinks: function() {
-            return new DuoGraphContainer(this, DiLinks);
+            return new DuoGraphContainer(new DiLinks(this, Direction['in']), new DiLinks(this, Direction['out']));
         },
         links: function(direction) {
             return direction? this._links.container(direction) : this._links;
@@ -416,12 +420,14 @@
         statics: {
             Duality: Duality
         },
-
+        initialize: function(owner, duality) {
+            this._duality = duality;
+        },
         dual: function() {
-            return this._owner.nodes(duality().dual());
+            return this._owner.nodes(this._duality.dual());
         },
         duality: function() {
-            return this._owner.nodes(Duality.hvert)? Duality.hvert : Duality.hedge;
+            return this._duality;
         }
     });
 
@@ -454,7 +460,7 @@
 
     var DualGraph = inherits(Graph, {
         createNodes: function() {
-            return new DuoGraphContainer(this, DualNodes);
+            return new DuoGraphContainer(new DualNodes(this, Duality['hvert']), new DualNodes(this, Duality['hedge']));
         },
         nodes: function(duality) {
             return duality? this._nodes.container(duality) : this._nodes;
@@ -481,7 +487,7 @@
 
     var FracDualGraph = inherits(DualGraph, GraphFractality).extend({
         createNodes: function() {
-            return new DuoGraphContainer(this, FracDualNodes);
+            return new DuoGraphContainer(new FracDualNodes(this, Duality['hvert']), new FracDualNodes(this, Duality['hedge']));
         }
     });
 
