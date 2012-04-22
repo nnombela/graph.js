@@ -25,11 +25,13 @@
             Types: Types
         },
 
-        initialize: function(owner, label) {
-            this._owner = owner? owner : null;
-            if (label !== undefined) {
-                this._label = label;
-            }
+        constructor: function() {
+            this.initialize(arguments);
+        },
+
+        initialize: function(label) {
+            this._label = label;
+            this._owner = null;
         },
 
         type: function() {
@@ -40,7 +42,7 @@
             return this._owner.factory();
         },
         label: function() {
-            return this._label !== undefined? this._label : this._owner?
+            return this._label? this._label : this._owner?
                     this._owner.label() + '::' + this.type().val() + ':' + this.index() : this.type().val();
         },
         index: function() {
@@ -50,68 +52,74 @@
             return type === undefined || this.type() === type? this : this._owner.belongsTo(type);
         },
         free: function() {
-            this._owner.free(this);
+            if (this._owner) this._owner.free(this);
+            this._owner = null;
             return this;
         }
     });
 
-    var GraphContainer = inherits(GraphObject, {
-        initialize: function() {
-            this.children = [];
-        },
-
-        Accessor: inherits(Object, {
-            initialize: function(container) {
-                this.container = container;
-                this.obj = {};
-            },
-            get: function(gobj) {
-                return this.obj[gobj.label()];
-            },
-            set: function(gobj, value) {
-                this.obj[gobj.label()] = value;
-            }
-        }),
+    var Iterability = {
         Iterator: inherits(Object, {
-            initialize: function(container) {
+            constructor: function(container) {
                 this.container = container;
-                this.cursor = -1;
+                this._cursor = -1;
             },
             current: function() {
-                return this.container.get(this.cursor);
+                return this.container.get(this._cursor);
             },
             next: function() {
-                return this.container.get(++this.cursor);
+                return this.container.get(++this._cursor);
             },
             hasNext: function() {
-                return this.cursor + 1 < this.container.size();
+                return this._cursor + 1 < this.container.size();
             },
             index: function() {
-                return this.cursor;
+                return this._cursor;
             }
         }),
-
-        get: function(index) {
-            return this.children[index];
-        },
-        size: function() {
-            return this.children.length;
-        },
         iterator: function() {
             return new this.Iterator(this);
-        },
+        }
+    };
+
+    var Accessibility = {
+        Accessor: inherits(Object, {
+            constructor: function(container) {
+                this.container = container;
+                this.array = [];
+            },
+            get: function(gobj) {
+                return this.array[gobj.index()];
+            },
+            set: function(gobj, value) {
+                this.array[gobj.index()] = value;
+            }
+        }),
         accessor: function() {
             return new this.Accessor(this);
+        }
+    };
+
+    var GraphContainer = inherits(GraphObject, {
+        initialize: function() {
+            this._children = [];
+        },
+
+        get: function(index) {
+            return this._children[index];
+        },
+        size: function() {
+            return this._children.length;
         },
         forEach: function(func) {
-            this.children.forEach(func);
+            this._children.forEach(func);
             return this;
         },
         indexOf: function(child) {
-            return this.children.indexOf(child);
+            return this._children.indexOf(child);
         },
         find: function(func) {
-            return this.children.find(func);
+            return this._children.find(func);
         },
         contains: function(gobj) {
             return this.indexOf(gobj) !== -1;
@@ -119,10 +127,10 @@
         add: function(gobj) {
             if (this.type().children() === gobj.type()) {
                 gobj._owner = this;
-                this.children.push(gobj);
+                this._children.push(gobj);
                 return this;
             } else {
-                throw new Error('Incorrent type: ' + gobj.type().val());
+                throw new Error('Incorrect type: ' + gobj.type().val());
             }
         },
         addNew: function() {
@@ -131,22 +139,24 @@
         remove: function(gobj) {
             var idx = this.indexOf(gobj);
             if (idx !== -1) {
-                this.children.splice(idx, 1);
+                this._children.splice(idx, 1);
             }
             return idx;
         },
         free: function(gobj) {
             return gobj? this.remove(gobj) : GraphObject.super_.free.call();
         }
-    });
+    }).extend(Iterability).extend(Accessibility);
 
-    var DuoGraphContainer = inherits(GraphContainer, {
-        initialize: function(container0, container1) {
-            this['0'] = container0;
-            this['1'] = container1;
+    var DuoGraphContainer = inherits(GraphObject, {
+        initialize: function(label, config) {
+            var keys = Object.keys(config);
+            this['0'] = this[keys[0]] = config[keys[0]];
+            this['1'] = this[keys[1]] = config[keys[1]];
         },
-        container: function(index) {
-            return this[index];
+
+        container: function(name) {
+            return this[name];
         },
         get: function(index) {
             var size0 = this[0].size();
@@ -169,42 +179,44 @@
         size: function() {
             return this[0].size() + this[1].size();
         },
-        add: function(gobj, index) {
-            return this[index].add(gobj);
+        add: function(gobj, name) {
+            return this[name].add(gobj);
         },
-        addNew: function(index) {
-            return index? this[index].addNew() : this[0].addNew();
+        addNew: function(name) {
+            return name? this[name].addNew() : this[0].addNew();
         },
-        remove: function(gobj, index) {
-            if (index) {
-                return this[index].remove(gobj);
+        remove: function(gobj, name) {
+            if (name) {
+                return this[name].remove(gobj);
             } else {
                 var idx = this[0].remove(gobj);
                 return idx !== -1? idx : this[1].remove(gobj);
             }
         },
         free: function() {
-            GraphContainer.super_.free.call(this);
+            DuoGraphContainer.super_.free.call(this);
             this[0].free();
             this[1].free();
             return this;
         }
-    });
+    }).extend(Iterability).extend(Accessibility);
 
 // ---- Link
     var Link = inherits(GraphObject, {
         initialize: function() {
             this._pair = null;
         },
-
+        factory: function() {
+            return GraphFactory.getFactory();
+        },
         type: function() {
             return Types.link;
         },
         bind: function(pair) {
-            this._bind('_pair', this._pair);
+            this._bind('_pair', pair);
         },
         unbind: function() {
-            this._unbind('_pair', this._pair)
+            this._unbind('_pair')
         },
         node: function() {
             return this._owner._owner;
@@ -220,17 +232,20 @@
             if (this[prop] === null && pair[prop] === null) {
                 this[prop] = pair;
                 pair[prop] = this;
-            } else {
+            } else if (this[prop] !== pair || pair[prop] !== this) {
                 throw new Error('Not able to bind links ( ' + this.label() + ', ' + pair.label() + ')')
             }
         },
-        _unbind: function(prop, pair) {
-            pair[prop] = null;
-            this[prop] = null;
+        _unbind: function(prop) {
+            var pair = this[prop];
+            if (pair !== null) {
+                pair[prop] = null;
+                this[prop] = null;
+            }
         }
     });
 
-    var DiLink = inherits(Link, {
+    var LinkDirectability = {
         statics: {
             Direction: Direction
         },
@@ -243,16 +258,16 @@
             return this._reverse;
         },
         bindReverse: function(pair) {
-            this._bind('_reverse', this._reverse);
+            this._bind('_reverse', pair);
         },
         unbindReverse: function() {
-            this._unbind('_reverse', this._reverse)
+            this._unbind('_reverse')
         },
 
         direction: function() {
             return this._owner.direction();
         }
-    });
+    };
 
     var LinkFractality = {
         initialize: function() {
@@ -264,10 +279,10 @@
             return this._inverse;
         },
         bindInverse: function(pair) {
-            this._bind('_inverse', this._inverse);
+            this._bind('_inverse', pair);
         },
         unbindInverse: function() {
-            this._unbind('_inverse', this._inverse)
+            this._unbind('_inverse')
         },
 
         down: function() {
@@ -278,19 +293,28 @@
         }
     };
 
-    var FracLink = inherits(Link, LinkFractality);
-    var FracDiLink = inherits(DiLink, LinkFractality);
+    var DiLink = inherits(Link, {
+        factory: function() {
+            return this;
+        }
+    }).extend(LinkDirectability);
+
+    var FracLink = inherits(Link, {
+        factory: function() {
+            return this;
+        }
+    }).extend(LinkFractality);
+
+    var FracDiLink = inherits(Link, {
+        factory: function() {
+            return this;
+        }
+    }).extend(LinkDirectability).extend(LinkFractality);
 
 
 // -------------- Links
 
-    var Links = inherits(GraphContainer, {
-        type: function() {
-            return Types.links;
-        }
-    });
-
-    var DiLinks = inherits(Links, {
+    var LinksDirectability = {
         statics: {
             Direction: Direction
         },
@@ -307,7 +331,8 @@
         direction: function() {
             return this._direction;
         }
-    });
+    };
+
 
     var LinksFractality = {
         inverse: function(direction) {
@@ -319,18 +344,25 @@
         }
     };
 
-    var FracLinks = inherits(Links, LinksFractality);
+    var Links = GraphContainer;
 
-    var FracDiLinks = inherits(DiLinks, LinksFractality);
+    var DiLinks = inherits(GraphContainer, {
+
+    }).extend(LinksDirectability);
+
+    var FracLinks = inherits(GraphContainer, {
+
+    }).extend(LinksFractality);
+
+    var FracDiLinks = inherits(GraphContainer, {
+
+    }).extend(LinksDirectability).extend(LinksFractality);
 
 // --------------- Node
 
     var Node = inherits(GraphObject, {
-        _createLinks: function() {
-            return new Links(this);
-        },
         initialize: function() {
-            this._links = this._createLinks();
+            this._links = this.factory().Links();
         },
         type: function() {
             return Types.node;
@@ -340,18 +372,20 @@
         },
         links: function() {
             return this._links;
+        },
+        indexOf: function(links) {
+            return this._links === links? 0 : -1;
         }
     });
 
-    var DiNode = inherits(Node, {
-        _createLinks: function() {
-            return new DuoGraphContainer(new DiLinks(this, Direction['in']), new DiLinks(this, Direction['out']));
+    var NodeDirectability = {
+        statics: {
+            Direction: Direction
         },
         links: function(direction) {
-            return direction? this._links.container(direction) : this._links;
+            return direction? this._links.container(direction.val()) : this._links;
         }
-    });
-
+    };
 
     var NodeFractality = {
         initialize: function() {
@@ -379,44 +413,76 @@
         }
     };
 
-    var DualNode = inherits(Node, NodeDuality);
 
-    var DualDiNode = inherits(DiNode, NodeDuality);
+    var DiNode = inherits(Node, {
+        _createLinks: function() {
+            var config = { 'in': new DiLinks(this, Direction['in']), 'out': new DiLinks(this, Direction['out']) };
+            return new DuoGraphContainer(config);
+        },
+        factory: function() {
+            return this;
+        }
+    }).extend(NodeDirectability);
 
-    var FracNode = inherits(Node, NodeFractality).extend({
+    var DualNode = inherits(Node, {
+        factory: function() {
+            return this;
+        }
+    }).extend(NodeDuality);
+
+    var DualDiNode = inherits(Node, {
+        _createLinks: function() {
+            var config = { 'in': new DiLinks(this, Direction['in']), 'out': new DiLinks(this, Direction['out']) };
+            return new DuoGraphContainer(config);
+        },
+        factory: function() {
+            return this;
+        }
+    }).extend(NodeDirectability).extend(NodeDuality);
+
+    var FracNode = inherits(Node, {
         _createLinks: function()  {
             return new FracLinks(this);
+        },
+        factory: function() {
+            return this;
         }
-    });
+    }).extend(NodeFractality);
 
-    var FracDiNode = inherits(DiNode, NodeFractality).extend({
-        _createLinks: function()  {
-            return new DuoGraphContainer(this, FracDiLinks);
+    var FracDiNode = inherits(Node, {
+        _createLinks: function() {
+            var config = { 'in': new FracDiLinks(this, Direction['in']), 'out': new FracDiLinks(this, Direction['out']) };
+            return new DuoGraphContainer(config);
+        },
+        factory: function() {
+            return this;
         }
-    });
+    }).extend(NodeDirectability).extend(NodeFractality);
 
-    var FracDualNode = inherits(DualNode, NodeFractality).extend({
+    var FracDualNode = inherits(DualNode, {
         _createLinks: function()  {
             return new FracLinks(this);
+        },
+        factory: function() {
+            return this;
         }
-    });
+    }).extend(NodeFractality);
 
-    var FracDualDiNode = inherits(DualDiNode, NodeFractality).extend({
-        _createLinks: function()  {
-            return new DuoGraphContainer(this, FracDiLinks);
+    var FracDualDiNode = inherits(Node, {
+        _createLinks: function() {
+            var config = { 'in': new FracDiLinks(this, Direction['in']), 'out': new FracDiLinks(this, Direction['out']) };
+            return new DuoGraphContainer(config);
+        },
+        factory: function() {
+            return this;
         }
-    });
+    }).extend(NodeDirectability).extend(NodeDuality).extend(NodeFractality);
+
 
 
 // ---------------- Nodes
 
-    var Nodes = inherits(GraphContainer, {
-        type: function() {
-            return Types.nodes;
-        }
-    });
-
-    var DualNodes = inherits(Nodes, {
+    var NodesDuality = {
         statics: {
             Duality: Duality
         },
@@ -429,7 +495,7 @@
         duality: function() {
             return this._duality;
         }
-    });
+    };
 
     var NodesFractality = {
         ordinal: function() {
@@ -437,35 +503,50 @@
         }
     };
 
-    var FracNodes = inherits(Nodes, NodesFractality);
 
-    var FracDualNodes = inherits(DualNodes, NodesFractality);
+    var Nodes = GraphContainer;
+
+    var DualNodes = inherits(GraphContainer, {
+        factory: function() {
+            return this;
+        }
+    }).extend(NodesDuality);
+
+    var FracNodes = inherits(GraphContainer, {
+        factory: function() {
+            return this;
+        }
+    }).extend(NodesFractality);
+
+    var FracDualNodes = inherits(GraphContainer, {
+        factory: function() {
+            return this;
+        }
+    }).extend(NodesDuality).extend(NodesFractality);
+
 
 
 // ----------------- Graph
     var Graph = inherits(GraphObject, {
-        createNodes: function() {
-            return new Nodes(this);
-        },
         initialize: function() {
-            this._nodes = this.createNodes(arguments);
+            this._nodes = new this.factory().Nodes()
         },
         type: function() {
             return Types.graph;
         },
         nodes: function() {
             return this._nodes;
+        },
+        indexOf: function(nodes) {
+            return this._nodes === nodes? 0 : -1;
         }
     });
 
-    var DualGraph = inherits(Graph, {
-        createNodes: function() {
-            return new DuoGraphContainer(new DualNodes(this, Duality['hvert']), new DualNodes(this, Duality['hedge']));
-        },
+    var GraphDuality = {
         nodes: function(duality) {
             return duality? this._nodes.container(duality) : this._nodes;
         }
-    });
+    };
 
     var GraphFractality = {
         initialize: function() {
@@ -479,28 +560,37 @@
         }
     };
 
-    var FracGraph = inherits(Graph, GraphFractality).extend({
-        createNodes: function() {
-            return new FracNodes(this);
+    var DualGraph = inherits(Graph, {
+        _createNodes: function() {
+            var config = { 'hvert': new DualNodes(this, Duality['hvert']), 'hedge': new DualNodes(this, Duality['hedge']) };
+            return new DuoGraphContainer(config);
+        },
+        factory: function() {
+            return this;
         }
-    });
+    }).extend(GraphDuality);
 
-    var FracDualGraph = inherits(DualGraph, GraphFractality).extend({
-        createNodes: function() {
-            return new DuoGraphContainer(new FracDualNodes(this, Duality['hvert']), new FracDualNodes(this, Duality['hedge']));
+    var FracGraph = inherits(Graph, {
+        _createNodes: function() {
+            return new FracNodes(this);
+        },
+        factory: function() {
+            return this;
         }
-    });
+    }).extend(GraphFractality);
+
+    var FracDualGraph = inherits(DualGraph, {
+        _createNodes: function() {
+            var config = { 'hvert': new FracDualNodes(this, Duality['hvert']), 'hedge': new FracDualNodes(this, Duality['hedge']) };
+            return new DuoGraphContainer(config);
+        },
+        factory: function() {
+            return this;
+        }
+    }).extend(GraphFractality);
 
 
 // ----------------- Graph Factory
-
-    var GraphFactoryProps = {
-        VERSION: '0.1',
-        Config: enumeration(['directed', 'dual', 'fractal']),
-        Types: Types,
-        Direction: Direction,
-        Duality: Duality
-    };
 
     var GraphFactory = inherits(Object, {
         statics: {
@@ -508,16 +598,20 @@
 
             Config: enumeration(['directed', 'dual', 'fractal']),
 
+            Types: Types,
+            Direction: Direction,
+            Duality: Duality,
+
             register: function(config, props) {
                 var factory = new GraphFactory(config, props);
                 GraphFactory[factory.name] = factory;
                 return factory;
             },
             getFactory: function(config) {
-                return GraphFactory[GraphFactory._configToKey(config)];
+                return GraphFactory[GraphFactory._configToName(config || {})];
             },
             _configToName: function(config) {
-                var name = '_' + (config.name || 'default');
+                var name = config.name || 'default';
                 if (config.directed) {
                     name += '_directed';
                 }
@@ -530,25 +624,35 @@
                 return name;
             }
         },
-
-        Types: Types,
-        Direction: Direction,
-        Duality: Duality,
+        create: function(Type) {
+            return new Type(this);
+        },
 
         constructor: function(config, props) {
             this.config = config;
-            this.name = this._configToName(config);
+            this.name = GraphFactory._configToName(config);
             extend(this, props);
         }
     });
 
     GraphFactory.register({name: 'default'}, {
         Link: Link,
+        Links: Links,
         Node: Node,
+        Nodes: Nodes,
         Graph: Graph
     });
 
     GraphFactory.register({name: 'default', directed: true}, {
+        createLink: function()  { return new DiLink(this) },
+        createLinks: function() {
+            var config = { 'in': new DiLinks(this, Direction['in']), 'out': new DiLinks(this, Direction['out']) };
+            return new DuoGraphContainer(config);
+        },
+        createNode: function()  { return new DiNode(this)   },
+        createNodes: function() { return new Nodes(this)  },
+        createGraph: function() { return new Graph(this)  },
+
         Link: DiLink,
         Node: DiNode,
         Graph: Graph
@@ -593,60 +697,62 @@
 
     //-------- Helper functions
 
-    function extend(dest, source) {
-        for (var prop in source) {   // enumerable properties
-            dest[prop] = source[prop];
+    function merge(dst, src) {
+        for (var prop in src) {
+            dst[prop] = extend(dst[prop], src[prop]);
         }
-        return dest;
+        return dst;
     }
 
-    function clone(obj) {
-        return extend({}, obj);
+    function compose(dst, src) {
+        return function() {
+            dst.apply(this, [src.apply(this, arguments)]);
+        }
     }
 
-    function extendIf(dest, source, test) {
-        for (var prop in source) {
-            if (test(prop)) {
-                dest[prop] = source[prop];
-            }
+    function extend(dst, src) {
+        if (!dst || dst === src) {
+            return src;
         }
-        return dest;
+        if (typeof dst === 'object' && typeof src === 'object') {
+            return merge(dst, src);
+        }
+        if (typeof dst === 'function' && typeof src === 'function') {
+            return compose(dst, src);
+        }
+        return dst;
     }
 
     function inherits(Parent, props) {
-        var constructor = props.hasOwnProperty('constructor')? props.constructor : undefined;
-        var initialize = props.hasOwnProperty('initialize')? props.initialize : undefined;
+//        var constructor = props.hasOwnProperty('constructor')? props.constructor : Parent;
+//
+//        var Child = function() {
+//            constructor.apply(this, arguments);
+//        };
 
         var Child = function() {
-            if (constructor) {
-                constructor.apply(this, arguments);
-            } else {
-                Parent.apply(this, arguments);  // call Parent r
-                if (initialize) { // then call initialization if exits
-                    initialize.apply(this, arguments);
-                }
-            }
+            Parent.apply(this, arguments);
         };
 
         extend(Child, Parent); // copy static class properties from Parent
 
-        if (props.hasOwnProperty('statics')) {   // Add new ones
-            extend(Child, props.statics);
-        }
-
         Child.Parent = Parent;
         Child.super_= Parent.prototype;
-        Child.extend = function(props) {
-            return extend(Child.prototype, props);
-        };
 
         Child.prototype = Object.create(Parent.prototype, {
             constructor: { value: Child, enumerable: false }
         });
 
-        extendIf(Child.prototype, props, function(prop) {
-            return props.hasOwnProperty(prop) && prop !== 'constructor' && prop !== 'initialize';
-        });
+        Child.extend = function(props) {
+            if (props.statics) {
+                extend(Child, props.statics);
+            }
+            extend(Child.prototype, props);
+
+            return this;
+        };
+
+        Child.extend(props);
 
         return Child;
     }
@@ -677,27 +783,37 @@
     // ----------------------------
 
 
-    return root.Graph = GraphFactory;
+    return root.G = GraphFactory;
 
 
 }).call(this);
 
-var G = Graph.getFactory();
+var factory = G.getFactory();
 
-console.log("children type " + G.Types.node.children().val());
+console.log('Factory name: ' + factory.name);
 
-var links = new G.Links();
+console.log("children type " + Graph.Types.node.children().val());
 
-var link1 = new G.Link();
-var link2 = new G.Link();
 
-links.add(link1).add(link2);
+factory.create(G.graph);
 
-var it = links.iterator();
+var graph = new factory.createGraph();
 
-console.log("iter index " + it.array.length);
+var node1 = new factory.Node();
+var node2 = new factory.Node();
 
-console.log("Link1 label " + link1.label());
+graph.nodes().add(node1).add(node2);
+
+var link1 = new factory.Link();
+var link2 = new factory.Link();
+
+
+node1.links().add(link1);
+node2.links().add(link2);
+
+link1.bind(link2);
+
+
 
 
 
