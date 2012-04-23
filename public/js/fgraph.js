@@ -697,13 +697,10 @@
 
     //-------- Helper functions
 
-    function merge(dst, src, clonate) {
-        dst = clonate? merge({}, dst) : dst;
-
+    function merge(dst, src) {
         for (var prop in src) {
             if (src.hasOwnProperty(prop) && prop !== 'constructor') {
-                // clonate in case is not own property
-                dst[prop] = extend(dst[prop], src[prop], dst.hasOwnProperty(prop) === false);
+                dst[prop] = extend(dst[prop], src[prop], dst.hasOwnProperty(prop) === false);  // clonate in case does not own property
             }
         }
         return dst;
@@ -715,18 +712,17 @@
         }
     }
 
+    function clone(dst, src) {
+        var obj = dst.apply && src.apply? compose(dst, src) : {};  // In case both are functions then compose them !!
+        return merge(merge(obj, dst), src);
+    }
+
     function extend(dst, src, clonate) {
         if (!dst || dst === src) {
             return src;
         }
-        if (!src) {
-            return dst;
-        }
-        if (typeof dst === 'function' && typeof src === 'function') {
-            return compose(dst, src);
-        }
-        if (typeof dst === 'object' && typeof src === 'object') {
-            return merge(dst, src, clonate);
+        if (src && (typeof src === 'object' || typeof src === 'function')) {
+            return clonate? clone(dst, src) : merge(dst, src);
         }
 
         return dst;
