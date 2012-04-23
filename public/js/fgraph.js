@@ -697,41 +697,47 @@
 
     //-------- Helper functions
 
-    function merge(dst, src) {
+    function merge(dst, src, clonate) {
+        dst = clonate? merge({}, dst) : dst;
+
         for (var prop in src) {
-            dst[prop] = extend(dst[prop], src[prop]);
+            if (src.hasOwnProperty(prop) && prop !== 'constructor') {
+                // clonate in case is not own property
+                dst[prop] = extend(dst[prop], src[prop], dst.hasOwnProperty(prop) === false);
+            }
         }
         return dst;
     }
 
     function compose(dst, src) {
         return function() {
-            dst.apply(this, [src.apply(this, arguments)]);
+            return dst.apply(this, [src.apply(this, arguments)]);
         }
     }
 
-    function extend(dst, src) {
+    function extend(dst, src, clonate) {
         if (!dst || dst === src) {
             return src;
         }
-        if (typeof dst === 'object' && typeof src === 'object') {
-            return merge(dst, src);
+        if (!src) {
+            return dst;
         }
         if (typeof dst === 'function' && typeof src === 'function') {
             return compose(dst, src);
         }
+        if (typeof dst === 'object' && typeof src === 'object') {
+            return merge(dst, src, clonate);
+        }
+
         return dst;
     }
 
+
     function inherits(Parent, props) {
-//        var constructor = props.hasOwnProperty('constructor')? props.constructor : Parent;
-//
-//        var Child = function() {
-//            constructor.apply(this, arguments);
-//        };
+        var constructor = props && props.hasOwnProperty('constructor')? props.constructor : Parent;
 
         var Child = function() {
-            Parent.apply(this, arguments);
+            constructor.apply(this, arguments);
         };
 
         extend(Child, Parent); // copy static class properties from Parent
@@ -743,18 +749,17 @@
             constructor: { value: Child, enumerable: false }
         });
 
-        Child.extend = function(props) {
-            if (props.statics) {
-                extend(Child, props.statics);
-            }
-            extend(Child.prototype, props);
+        Child.newChild = Child.newChild || function(props) {
+            return inherits(this, props);
+        };
 
+        Child.extend = Child.extend || function(props) {
+            extend(this, props.statics);
+            extend(this.prototype, props);
             return this;
         };
 
-        Child.extend(props);
-
-        return Child;
+        return Child.extend(props);
     }
 
     function enumeration(array, props) {
