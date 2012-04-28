@@ -8,8 +8,8 @@
                 if (props.hasOwnProperty('constructor')) {
                     Class = inherits(Class, props.constructor)
                 }
-                if (props.statics) extend(Class, props.statics);
-                extend(Class.prototype, props);
+                if (props.statics) extendClass(Class, props.statics);
+                extendClass(Class.prototype, props);
             }
             return Class;
         }
@@ -20,7 +20,7 @@
         if (obj instanceof Function) {
             Composer = extend(compose(Composer, obj), Composer)
         }
-        return extend(Composer, obj)
+        return extendClass(Composer, obj)
     };
 
     Composer.extend = Composer;
@@ -39,19 +39,28 @@
 
     //----------------------------------
 
-    function extendExec(dst, src, exec) {
+    function extend(dst, src, test, exec) {
+        test = test || function() { return true };
+        exec = exec || function(prop) { return src[prop] };
+
         for (var prop in src) {
-            if (src.hasOwnProperty(prop) && prop !== 'constructor') {
-                dst[prop] = exec(dst[prop], src[prop]);
+            if (test(prop, dst, src)) {
+                dst[prop] = exec(prop, dst, src)
             }
         }
         return dst;
     }
 
-    function extend(dst, src) {
-        return extendExec(dst, src, function(dstVal, srcVal) {
-            return dstVal && dstVal.extend? destVal.extend(srcVal) : srcVal;
-        });
+    function extendClass(dst, src) {
+        return extend(dst, src,
+            function(prop) {
+                return prop !== 'constructor'
+            },
+            function(prop) {
+                var dstVal = dst[prop], srcVal = src[prop];
+                return dstVal && dstVal.extend? dstVal.extend(srcVal) : srcVal
+            }
+        );
     }
 
     function compose(func1, func2) {
