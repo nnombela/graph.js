@@ -697,13 +697,35 @@
 
     //-------- Helper functions
 
-    function merge(dst, src) {
+    function isObject(obj) {
+        return obj === Object(obj);
+    }
+
+    function extend(dst, src) {
         for (var prop in src) {
             if (src.hasOwnProperty(prop) && prop !== 'constructor') {
-                dst[prop] = extend(dst[prop], src[prop], dst.hasOwnProperty(prop) === false);  // clonate in case does not own property
+                dst[prop] = _extend(dst[prop], src[prop], !dst.hasOwnProperty(prop));
             }
         }
         return dst;
+    }
+
+    function clone(obj, composeObj) {
+        var newObj = obj.apply? composeObj? compose(obj, composeObj) : identity(obj) : {};
+        return extend(newObj, obj);
+    }
+
+    function _extend(dst, src, clonate) {
+        if (dst != src && isObject(dst) && isObject(src)) {
+            dst = clonate? clone(dst, src) : dst;
+            return extend(dst, src);
+        } else {
+            return src;
+        }
+    }
+
+    function identity(func) {
+        return function() { func.apply(this, arguments )}
     }
 
     function compose(dst, src) {
@@ -711,23 +733,6 @@
             return dst.apply(this, [src.apply(this, arguments)]);
         }
     }
-
-    function clone(dst, src) {
-        var obj = dst.apply && src.apply? compose(dst, src) : {};  // In case both are functions then compose them !!
-        return merge(merge(obj, dst), src);
-    }
-
-    function extend(dst, src, clonate) {
-        if (!dst || dst === src) {
-            return src;
-        }
-        if (src && (typeof src === 'object' || typeof src === 'function')) {
-            return clonate? clone(dst, src) : merge(dst, src);
-        }
-
-        return dst;
-    }
-
 
     function inherits(Parent, props) {
         var constructor = props && props.hasOwnProperty('constructor')? props.constructor : Parent;
@@ -745,7 +750,7 @@
             constructor: { value: Child, enumerable: false }
         });
 
-        Child.newChild = Child.newChild || function(props) {
+        Child.createChild = Child.newChild || function(props) {
             return inherits(this, props);
         };
 
