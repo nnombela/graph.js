@@ -18,7 +18,7 @@
         }
     });
 
-    var composite = function(obj) {
+    var composition = function(obj) {
         return extend(obj, {
             extend: function(obj) {
                 var instance = (obj instanceof Function)? recursiveExtend(compose(this, obj), this): Object.create(this);
@@ -37,7 +37,7 @@
         },
         OOP: {
             Class: Class,
-            composite: composite
+            composition: composition
         }
     });
 
@@ -102,10 +102,10 @@ var Parent = OOP.Class.extend({
         console.log("Parent constructor");
         this.initialize();
     },
-    initialize: OOP.composite(function() {
+    initialize: OOP.composition(function() {
         console.log("Parent initialize");
     }),
-    config: OOP.composite({ a: 'a' })
+    config: OOP.composition({ a: 'a' })
 });
 
 
