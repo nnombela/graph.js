@@ -1,19 +1,19 @@
 (function() {
     var root = this;
 
-    var Class = {
-        extend: function(props) {
-            var Class = this;
-            if (props instanceof Object) {
-                if (props.hasOwnProperty('constructor')) {
-                    Class = inherits(Class, props.constructor)
-                }
-                if (props.statics) extendClass(Class, props.statics);
-                extendClass(Class.prototype, props);
+    var Class = function(props) {
+        var Class = this;
+        if (props instanceof Object) {
+            if (props.hasOwnProperty('constructor')) {
+                Class = inherits(Class, props.constructor)
             }
-            return Class;
+            if (props.statics) extendClass(Class, props.statics);
+            extendClass(Class.prototype, props);
         }
+        return Class;
     };
+
+    Class.extend =  Class;
 
     var Composer = function(obj) {
         var Composer = this;
@@ -93,7 +93,7 @@
 
 }).call(this);
 
-var Parent = OOP.inherits(Object, {
+var Parent = OOP.Class.extend({
     constructor: function() {
         console.log("Parent constructor");
         this.initialize();
@@ -105,7 +105,7 @@ var Parent = OOP.inherits(Object, {
 });
 
 
-var Child = Parent.createChild({
+var Child = Parent.extend({
     constructor: function() {
         console.log("Child constructor");
         this.super_.constructor.call(this);
