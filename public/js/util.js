@@ -21,8 +21,8 @@
     var composite = function(obj) {
         return extend(obj, {
             extend: function(obj) {
-                var instance = (obj instanceof Function)? compose(this, obj): {};
-                return recursiveExtend(recursiveExtend(instance, this), obj);
+                var instance = (obj instanceof Function)? recursiveExtend(compose(this, obj), this): Object.create(this);
+                return recursiveExtend(instance, obj);
             }
         })
     };
@@ -30,11 +30,15 @@
 
 
     return extend(root, {
-        extend: extend,
-        inherits: inherits,
-        compose: compose,
-        Class: Class,
-        composite: composite
+        FP: {
+            extend: extend,
+            inherits: inherits,
+            compose: compose
+        },
+        OOP: {
+            Class: Class,
+            composite: composite
+        }
     });
 
 
@@ -93,15 +97,15 @@
 
 }).call(this);
 
-var Parent = Class.extend({
+var Parent = OOP.Class.extend({
     constructor: function() {
         console.log("Parent constructor");
         this.initialize();
     },
-    initialize: composite(function() {
+    initialize: OOP.composite(function() {
         console.log("Parent initialize");
     }),
-    config: composite({ a: 'a' })
+    config: OOP.composite({ a: 'a' })
 });
 
 
