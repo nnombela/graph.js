@@ -1,66 +1,66 @@
 (function() {
     var root = this;
 
-    var Class = function(props) {
-        var Class = this;
-        if (props instanceof Object) {
-            if (props.hasOwnProperty('constructor')) {
-                Class = inherits(Class, props.constructor)
+    var Class = extend(function() {}, {
+        augment: function(props) {
+            recursiveExtend(this.prototype, props,
+                    function(prop) { return prop !== 'constructor' });  // avoid overridden constructor property
+            return this;
+        },
+        extend: function(props) {
+            if (props instanceof Function) {
+                return inherits(this, props);
             }
-            if (props.statics) extendClass(Class, props.statics);
-            extendClass(Class.prototype, props);
+            var Constructor = props.hasOwnProperty('constructor')? props.constructor : this;
+            var Child = inherits(this, Constructor);
+            if (props.statics) recursiveExtend(Child, props.statics);
+            return Child.augment(props);
         }
-        return Class;
+    });
+
+    var composite = function(obj) {
+        return extend(obj, {
+            extend: function(obj) {
+                var instance = (obj instanceof Function)? compose(this, obj): {};
+                return recursiveExtend(recursiveExtend(instance, this), obj);
+            }
+        })
     };
 
-    Class.extend =  Class;
 
-    var Composer = function(obj) {
-        var Composer = this;
-        if (obj instanceof Function) {
-            Composer = extend(compose(Composer, obj), Composer)
-        }
-        return extendClass(Composer, obj)
-    };
-
-    Composer.extend = Composer;
 
     return extend(root, {
-        FP: {
-            extend: extend,
-            inherits: inherits
-        },
-        OOP: {
-            Class: Class,
-            Composer: Composer
-        }
+        extend: extend,
+        inherits: inherits,
+        compose: compose,
+        Class: Class,
+        composite: composite
     });
 
 
     //----------------------------------
 
-    function extend(dst, src, test, exec) {
-        test = test || function() { return true };
+    function extend(dst, src, exec) {
         exec = exec || function(prop) { return src[prop] };
 
         for (var prop in src) {
-            if (test(prop, dst, src)) {
-                dst[prop] = exec(prop, dst, src)
+            var value = exec(prop, dst, src);
+
+            if (value !== undefined) {
+                dst[prop] = value;
             }
         }
         return dst;
     }
 
-    function extendClass(dst, src) {
-        return extend(dst, src,
-            function(prop) {
-                return prop !== 'constructor'
-            },
-            function(prop) {
+    function recursiveExtend(dst, src, test) {
+        return extend(dst, src, function(prop) {
+            if (!test || test(prop)) {
                 var dstVal = dst[prop], srcVal = src[prop];
                 return dstVal && dstVal.extend? dstVal.extend(srcVal) : srcVal
             }
-        );
+            return undefined;
+        });
     }
 
     function compose(func1, func2) {
@@ -93,27 +93,26 @@
 
 }).call(this);
 
-var Parent = OOP.Class.extend({
+var Parent = Class.extend({
     constructor: function() {
         console.log("Parent constructor");
         this.initialize();
     },
-    initialize: function() {
+    initialize: composite(function() {
         console.log("Parent initialize");
-    },
-    config: { a: 'a' }
+    }),
+    config: composite({ a: 'a' })
 });
 
 
 var Child = Parent.extend({
-    constructor: function() {
-        console.log("Child constructor");
-        this.super_.constructor.call(this);
-    },
+//    constructor: function() {
+//        console.log("Child constructor");
+//        this.super_.constructor.call(this);
+//    },
 
     initialize: function() {
         console.log("Child initialize");
-        this.super_.initialize.call(this);
     },
     config: { b: 'b' }
 });
