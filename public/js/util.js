@@ -3,25 +3,25 @@
 
     var Class = extend(function() {}, {
         augment: function(props) {
-            recursiveExtend(this.prototype, props,
-                    function(prop) { return prop !== 'constructor' });  // avoid overridden constructor property
+            recursiveExtend(this.prototype, props);
             return this;
         },
         extend: function(props) {
             if (props instanceof Function) {
                 return inherits(this, props);
             }
-            var Constructor = props.hasOwnProperty('constructor')? props.constructor : this;
-            var Child = inherits(this, Constructor);
+
+            var Child = props.hasOwnProperty('constructor')? inherits(this, props.constructor) : inherits(this);
             if (props.statics) recursiveExtend(Child, props.statics);
             return Child.augment(props);
         }
     });
 
-    var composition = function(obj) {
+    var composite = function(obj) {
         return extend(obj, {
             extend: function(obj) {
-                var instance = (obj instanceof Function)? recursiveExtend(compose(this, obj), this): Object.create(this);
+                var instance = (obj instanceof Function)? recursiveExtend(compose(this, obj), this):
+                        Object.create(this);
                 return recursiveExtend(instance, obj);
             }
         })
@@ -37,7 +37,7 @@
         },
         OOP: {
             Class: Class,
-            composition: composition
+            composite: composite
         }
     });
 
@@ -57,9 +57,9 @@
         return dst;
     }
 
-    function recursiveExtend(dst, src, test) {
+    function recursiveExtend(dst, src) {
         return extend(dst, src, function(prop) {
-            if (!test || test(prop)) {
+            if (prop !== 'constructor') {
                 var dstVal = dst[prop], srcVal = src[prop];
                 return dstVal && dstVal.extend? dstVal.extend(srcVal) : srcVal
             }
@@ -102,10 +102,10 @@ var Parent = OOP.Class.extend({
         console.log("Parent constructor");
         this.initialize();
     },
-    initialize: OOP.composition(function() {
+    initialize: OOP.composite(function() {
         console.log("Parent initialize");
     }),
-    config: OOP.composition({ a: 'a' })
+    config: OOP.composite({ a: 'a' })
 });
 
 
