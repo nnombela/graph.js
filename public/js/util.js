@@ -37,6 +37,7 @@
         },
         OOP: {
             Class: Class,
+            enumeration: enumeration,
             composite: composite
         }
     });
@@ -93,7 +94,28 @@
         return Child;
     }
 
+    function enumeration(array, props) {
+        props = extend(props || {}, {
+            initialize: function(value, index) {
+                this.value = value;
+                this.index = index;
+            },
+            val: function() {
+                return this.value;
+            },
+            idx: function() {
+                return this.index;
+            }
+        });
 
+        var Enum = inherits(Object, props);
+
+        var index = -1;
+        Enum.values = array.map(function(elem) {
+            return Enum[elem] = new Enum(elem, ++index)
+        });
+        return Enum;
+    }
 
 }).call(this);
 

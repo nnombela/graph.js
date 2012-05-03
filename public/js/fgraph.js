@@ -20,7 +20,7 @@
     });
 
 
-    var GraphObject = inherits(Object, {
+    var GraphObject = OOP.Class.extend({
         statics: {
             Types: Types
         },
@@ -29,10 +29,10 @@
             this.initialize(arguments);
         },
 
-        initialize: function(label) {
+        initialize: OOP.composite(function(label) {
             this._label = label;
             this._owner = null;
-        },
+        }),
 
         type: function() {
             return this._owner.children();
@@ -59,7 +59,7 @@
     });
 
     var Iterability = {
-        Iterator: inherits(Object, {
+        Iterator: OOP.Class.extend({
             constructor: function(container) {
                 this.container = container;
                 this._cursor = -1;
@@ -83,7 +83,7 @@
     };
 
     var Accessibility = {
-        Accessor: inherits(Object, {
+        Accessor: OOP.Class.extend({
             constructor: function(container) {
                 this.container = container;
                 this.array = [];
@@ -100,7 +100,7 @@
         }
     };
 
-    var GraphContainer = inherits(GraphObject, {
+    var GraphContainer = GraphObject.extend({
         initialize: function() {
             this._children = [];
         },
@@ -148,7 +148,7 @@
         }
     }).extend(Iterability).extend(Accessibility);
 
-    var DuoGraphContainer = inherits(GraphObject, {
+    var DuoGraphContainer = GraphObject.extend({
         initialize: function(label, config) {
             var keys = Object.keys(config);
             this['0'] = this[keys[0]] = config[keys[0]];
@@ -199,10 +199,10 @@
             this[1].free();
             return this;
         }
-    }).extend(Iterability).extend(Accessibility);
+    }).augment(Iterability).augment(Accessibility);
 
 // ---- Link
-    var Link = inherits(GraphObject, {
+    var Link = GraphObject.extend({
         initialize: function() {
             this._pair = null;
         },
@@ -360,7 +360,7 @@
 
 // --------------- Node
 
-    var Node = inherits(GraphObject, {
+    var Node = GraphObject.extend({
         initialize: function() {
             this._links = this.factory().Links();
         },
@@ -527,7 +527,7 @@
 
 
 // ----------------- Graph
-    var Graph = inherits(GraphObject, {
+    var Graph = GraphObject.extend( {
         initialize: function() {
             this._nodes = new this.factory().Nodes()
         },
@@ -592,7 +592,7 @@
 
 // ----------------- Graph Factory
 
-    var GraphFactory = inherits(Object, {
+    var GraphFactory = OOP.Class.extend({
         statics: {
             VERSION: '0.1',
 
@@ -693,101 +693,6 @@
         Node: FracDualDiNode,
         Graph: FracDualGraph
     });
-
-
-    //-------- Helper functions
-
-    function isObject(obj) {
-        return obj === Object(obj);
-    }
-
-    function extend(dst, src) {
-        for (var prop in src) {
-            if (src.hasOwnProperty(prop) && prop !== 'constructor') {
-                dst[prop] = _extend(dst[prop], src[prop], !dst.hasOwnProperty(prop));
-            }
-        }
-        return dst;
-    }
-
-    function clone(obj, composeObj) {
-        var newObj = obj.apply? composeObj? compose(obj, composeObj) : identity(obj) : {};
-        return extend(newObj, obj);
-    }
-
-    function _extend(dst, src, clonate) {
-        if (dst != src && isObject(dst) && isObject(src)) {
-            dst = clonate? clone(dst, src) : dst;
-            return extend(dst, src);
-        } else {
-            return src;
-        }
-    }
-
-    function identity(func) {
-        return function() { func.apply(this, arguments )}
-    }
-
-    function compose(dst, src) {
-        return function() {
-            return dst.apply(this, [src.apply(this, arguments)]);
-        }
-    }
-
-    function inherits(Parent, props) {
-        var constructor = props && props.hasOwnProperty('constructor')? props.constructor : Parent;
-
-        var Child = function() {
-            constructor.apply(this, arguments);
-        };
-
-        extend(Child, Parent); // copy static class properties from Parent
-
-        Child.Parent = Parent;
-        Child.super_= Parent.prototype;
-
-        Child.prototype = Object.create(Parent.prototype, {
-            constructor: { value: Child, enumerable: false }
-        });
-
-        Child.createChild = Child.newChild || function(props) {
-            return inherits(this, props);
-        };
-
-        Child.extend = Child.extend || function(props) {
-            extend(this, props.statics);
-            extend(this.prototype, props);
-            return this;
-        };
-
-        return Child.extend(props);
-    }
-
-    function enumeration(array, props) {
-        props = extend(props || {}, {
-            initialize: function(value, index) {
-                this.value = value;
-                this.index = index;
-            },
-            val: function() {
-                return this.value;
-            },
-            idx: function() {
-                return this.index;
-            }
-        });
-
-        var Enum = inherits(Object, props);
-
-        var index = -1;
-        Enum.values = array.map(function(elem) {
-            return Enum[elem] = new Enum(elem, ++index)
-        });
-        return Enum;
-    }
-
-    // ----------------------------
-
 
     return root.G = GraphFactory;
 
