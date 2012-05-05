@@ -108,7 +108,7 @@
             }
         });
 
-        var Enum = inherits(Object, props);
+        var Enum = Class.extend(props);
 
         var index = -1;
         Enum.values = array.map(function(elem) {
