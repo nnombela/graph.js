@@ -24,13 +24,13 @@
             Types: Types
         },
 
-        constructor: function() {
-            this.initialize(arguments);
+        constructor: function(label, owner) {
+            this.initialize(label, owner);
         },
 
-        initialize: OOP.composite(function(label) {
+        initialize: OOP.composite(function(label, owner) {
             this._label = label;
-            this._owner = null;
+            this._owner = owner;
         }),
 
         config: OOP.composite({name: 'default'}),
@@ -105,8 +105,7 @@
     var GraphContainer = GraphObject.extend({
         augments: [Iterability, Accessibility],
 
-        initialize: function(owner) {
-            this._owner = owner;
+        initialize: function() {
             this._children = [];
         },
         factory: function() {
@@ -338,8 +337,8 @@
 // --------------- Node
 
     var Node = GraphObject.extend({
-        initialize: function() {
-            this._links = this.factory().createLinks(this);
+        initialize: function(label) {
+            this._links = this.factory().createLinks(label, this);
         },
         type: function() {
             return Types.node;
@@ -405,8 +404,8 @@
 
 // ----------------- Graph
     var Graph = GraphObject.extend( {
-        initialize: function() {
-            this._nodes = this.factory().createNodes(this)
+        initialize: function(label) {
+            this._nodes = this.factory().createNodes(label, this)
         },
         type: function() {
             return Types.graph;
@@ -480,24 +479,24 @@
             FP.extend(this, props);
         },
 
-        create: function(type, arg) {
-            return new this[type.val().toUpperCase()](arg);
+        create: function(type, label, owner) {
+            return new this[type.val().toUpperCase()](label, owner);
         },
 
-        createLink: function(label) {
-            return new this.Link(label)
+        createLink: function(label, owner) {
+            return new this.Link(label, owner)
         },
-        createLinks: function(owner) {
-            return new this.Links(owner)
+        createLinks: function(label, owner) {
+            return new this.Links(label, owner)
         },
-        createNode: function(label) {
-            return new this.Node(label)
+        createNode: function(label, owner) {
+            return new this.Node(label, owner)
         },
-        createNodes: function(owner) {
-            return new this.Nodes(owner)
+        createNodes: function(label, owner) {
+            return new this.Nodes(label, owner)
         },
-        createGraph: function(label) {
-            return new this.Graph(label)
+        createGraph: function(label, owner) {
+            return new this.Graph(label, owner)
         }
     });
 
@@ -518,9 +517,9 @@
             Container: GraphContainer.extend({
                 augments: [Directed, LinksDirectability]
             }),
-            initialize: function(owner) {
-                this['0'] = this['in'] = new this.Container(owner);
-                this['1'] = this['out'] = new this.Container(owner);
+            initialize: function(label, owner) {
+                this['0'] = this['in'] = new this.Container(label? label + ':in' : label, owner);
+                this['1'] = this['out'] = new this.Container(label? label + ':out' : label, owner);
             }
         }),
         Node: Node.extend({
