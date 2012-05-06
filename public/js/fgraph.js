@@ -106,8 +106,8 @@
         augments: [Iterability, Accessibility],
 
         initialize: function(owner) {
-            this._children = [];
             this._owner = owner;
+            this._children = [];
         },
         factory: function() {
             return this._owner.factory();
@@ -446,7 +446,7 @@
         statics: {
             VERSION: '0.1',
 
-            Config: enumeration(['directed', 'dual', 'fractal']),
+            Config: OOP.enumeration(['directed', 'dual', 'fractal']),
 
             Types: Types,
             Direction: Direction,
@@ -474,18 +474,16 @@
                 return name;
             }
         },
-        create: function(Type) {
-            return new Type(this);
-        },
-
         constructor: function(config, props) {
             this.config = config;
             this.name = GraphFactory._configToName(config);
             FP.extend(this, props);
-        }
-    });
+        },
 
-    var factoryMethods = {
+        create: function(type, arg) {
+            return new this[type.val().toUpperCase()](arg);
+        },
+
         createLink: function(label) {
             return new this.Link(label)
         },
@@ -501,17 +499,17 @@
         createGraph: function(label) {
             return new this.Graph(label)
         }
-    };
+    });
 
-    GraphFactory.register({name: 'default'}, FP.extend({
+    GraphFactory.register({name: 'default'}, {
         Link: Link,
-        Links: Links,
+        Links: GraphContainer,
         Node: Node,
-        Nodes: Nodes,
+        Nodes: GraphContainer,
         Graph: Graph
-    }, factoryMethods));
+    });
 
-    GraphFactory.register({name: 'default', directed: true}, FP.extend({
+    GraphFactory.register({name: 'default', directed: true}, {
         Link: Link.extend({
             augments: [Directed, LinkDirectability]
         }),
@@ -528,60 +526,63 @@
         Node: Node.extend({
             augments: [Directed, NodeDirectability]
         }),
+        Nodes: GraphContainer.extend({
+            augments: [Directed]
+        }),
         Graph: Graph.extend({
             augments: [Directed]
         })
-    }, factoryMethods));
+    });
 
 
 
-    GraphFactory.register({name: 'default', dual: true}, FP.extend({
+    GraphFactory.register({name: 'default', dual: true}, {
         Link: null,
         Links: null,
         Node: null,
         Nodes: null,
         Graph: null
-    }, factoryMethods));
+    });
 
-    GraphFactory.register({name: 'default', fractal: true}, FP.extend({
+    GraphFactory.register({name: 'default', fractal: true}, {
         Link: null,
         Links: null,
         Node: null,
         Nodes: null,
         Graph: null
-    }, factoryMethods));
+    });
 
-    GraphFactory.register({name: 'default', directed:true, dual: true}, FP.extend({
+    GraphFactory.register({name: 'default', directed:true, dual: true}, {
         Link: null,
         Links: null,
         Node: null,
         Nodes: null,
         Graph: null
-    }, factoryMethods));
+    });
 
-    GraphFactory.register({name: 'default', directed:true, fractal: true}, FP.extend({
+    GraphFactory.register({name: 'default', directed:true, fractal: true}, {
         Link: null,
         Links: null,
         Node: null,
         Nodes: null,
         Graph: null
-    }, factoryMethods));
+    });
 
-    GraphFactory.register({name: 'default', dual:true, fractal: true}, FP.extend({
+    GraphFactory.register({name: 'default', dual:true, fractal: true}, {
         Link: null,
         Links: null,
         Node: null,
         Nodes: null,
         Graph: null
-    }, factoryMethods));
+    });
 
-    GraphFactory.register({name: 'default', directed: true, dual:true, fractal: true}, FP.extend({
+    GraphFactory.register({name: 'default', directed: true, dual:true, fractal: true}, {
         Link: null,
         Links: null,
         Node: null,
         Nodes: null,
         Graph: null
-    }, factoryMethods));
+    });
 
     return root.G = GraphFactory;
 
@@ -592,27 +593,25 @@ var factory = G.getFactory();
 
 console.log('Factory name: ' + factory.name);
 
-console.log("children type " + Graph.Types.node.children().val());
+console.log("children type " + G.Types.node.children().val());
 
+var graph = factory.createGraph("graph1");
 
-factory.create(G.graph);
-
-var graph = new factory.createGraph();
-
-var node1 = new factory.Node();
-var node2 = new factory.Node();
-
-graph.nodes().add(node1).add(node2);
-
-var link1 = new factory.Link();
-var link2 = new factory.Link();
-
-
-node1.links().add(link1);
-node2.links().add(link2);
-
-link1.bind(link2);
-
+//
+//var node1 = new factory.Node();
+//var node2 = new factory.Node();
+//
+//graph.nodes().add(node1).add(node2);
+//
+//var link1 = new factory.Link();
+//var link2 = new factory.Link();
+//
+//
+//node1.links().add(link1);
+//node2.links().add(link2);
+//
+//link1.bind(link2);
+//
 
 
 
