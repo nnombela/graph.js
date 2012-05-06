@@ -7,12 +7,14 @@
             return this;
         },
         extend: function(props) {
-            if (props instanceof Function) {
+            if (!props || props instanceof Function) {
                 return inherits(this, props);
             }
 
             var Child = props.hasOwnProperty('constructor')? inherits(this, props.constructor) : inherits(this);
             if (props.statics) recursiveExtend(Child, props.statics);
+            if (props.augments) props.augments.forEach(function(props) { Child.augment(props) });
+
             return Child.augment(props);
         }
     });
@@ -70,8 +72,8 @@
 
     function compose(func1, func2) {
         return function() {
-            var result1 = func1.apply(this, arguments);
-            return func2.apply(this, [result1].concat(arguments));
+            var args = func1.apply(this, arguments);
+            return func2.apply(this, args || arguments);
         };
     }
 

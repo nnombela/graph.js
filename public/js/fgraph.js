@@ -1,24 +1,23 @@
 (function() {
     var root = this;
 
-    var Types = enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
+    var Types = OOP.enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
             return Types.values[Types.values.indexOf(this) + 1];
         }
     });
 
-    var Direction = enumeration(['in', 'out'], {
+    var Direction = OOP.enumeration(['in', 'out'], {
         reverse: function() {
             return this === Direction['in']? Direction['out'] : Direction['out'];
         }
     });
 
-    var Duality =  enumeration(['hvert', 'hedge'], {
+    var Duality =  OOP.enumeration(['hvert', 'hedge'], {
         dual: function() {
             return this === Duality['hvert']? Duality['hedge'] : Duality['hvert'];
         }
     });
-
 
     var GraphObject = OOP.Class.extend({
         statics: {
@@ -34,13 +33,16 @@
             this._owner = null;
         }),
 
+        config: OOP.composite({name: 'default'}),
+
         type: function() {
             return this._owner.children();
         },
 
         factory: function() {
-            return this._owner.factory();
+            return GraphFactory.getFactory(this.config);
         },
+
         label: function() {
             return this._label? this._label : this._owner?
                     this._owner.label() + '::' + this.type().val() + ':' + this.index() : this.type().val();
@@ -101,10 +103,15 @@
     };
 
     var GraphContainer = GraphObject.extend({
-        initialize: function() {
-            this._children = [];
-        },
+        augments: [Iterability, Accessibility],
 
+        initialize: function(owner) {
+            this._children = [];
+            this._owner = owner;
+        },
+        factory: function() {
+            return this._owner.factory();
+        },
         get: function(index) {
             return this._children[index];
         },
@@ -146,15 +153,15 @@
         free: function(gobj) {
             return gobj? this.remove(gobj) : GraphObject.super_.free.call();
         }
-    }).extend(Iterability).extend(Accessibility);
+    });
+
 
     var DuoGraphContainer = GraphObject.extend({
-        initialize: function(label, config) {
-            var keys = Object.keys(config);
-            this['0'] = this[keys[0]] = config[keys[0]];
-            this['1'] = this[keys[1]] = config[keys[1]];
-        },
+        augments: [Iterability, Accessibility],
 
+        factory: function() {
+            return this._owner.factory();
+        },
         container: function(name) {
             return this[name];
         },
@@ -199,16 +206,15 @@
             this[1].free();
             return this;
         }
-    }).augment(Iterability).augment(Accessibility);
+    });
 
-// ---- Link
+// ---- Links
+
     var Link = GraphObject.extend({
         initialize: function() {
             this._pair = null;
         },
-        factory: function() {
-            return GraphFactory.getFactory();
-        },
+
         type: function() {
             return Types.link;
         },
@@ -245,6 +251,19 @@
         }
     });
 
+// ----
+    var Directed = {
+        config: {directed: true}
+    };
+
+    var Fractal = {
+        config: {fractal: true}
+    };
+
+    var Dual = {
+        config: {dual: true}
+    };
+// -----
     var LinkDirectability = {
         statics: {
             Direction: Direction
@@ -287,37 +306,12 @@
 
         down: function() {
             return this._down;
-        },
-        ordinal: function() {
-            return this._owner.ordinal();
         }
     };
-
-    var DiLink = inherits(Link, {
-        factory: function() {
-            return this;
-        }
-    }).extend(LinkDirectability);
-
-    var FracLink = inherits(Link, {
-        factory: function() {
-            return this;
-        }
-    }).extend(LinkFractality);
-
-    var FracDiLink = inherits(Link, {
-        factory: function() {
-            return this;
-        }
-    }).extend(LinkDirectability).extend(LinkFractality);
-
 
 // -------------- Links
 
     var LinksDirectability = {
-        statics: {
-            Direction: Direction
-        },
         initialize: function(owner, direction) {
             this._direction = direction;
         },
@@ -337,32 +331,15 @@
     var LinksFractality = {
         inverse: function(direction) {
             return this._owner.inverse().links(direction);
-        },
-
-        ordinal: function() {
-            return this._owner.ordinal();
         }
     };
 
-    var Links = GraphContainer;
-
-    var DiLinks = inherits(GraphContainer, {
-
-    }).extend(LinksDirectability);
-
-    var FracLinks = inherits(GraphContainer, {
-
-    }).extend(LinksFractality);
-
-    var FracDiLinks = inherits(GraphContainer, {
-
-    }).extend(LinksDirectability).extend(LinksFractality);
 
 // --------------- Node
 
     var Node = GraphObject.extend({
         initialize: function() {
-            this._links = this.factory().Links();
+            this._links = this.factory().createLinks(this);
         },
         type: function() {
             return Types.node;
@@ -379,9 +356,6 @@
     });
 
     var NodeDirectability = {
-        statics: {
-            Direction: Direction
-        },
         links: function(direction) {
             return direction? this._links.container(direction.val()) : this._links;
         }
@@ -414,78 +388,9 @@
     };
 
 
-    var DiNode = inherits(Node, {
-        _createLinks: function() {
-            var config = { 'in': new DiLinks(this, Direction['in']), 'out': new DiLinks(this, Direction['out']) };
-            return new DuoGraphContainer(config);
-        },
-        factory: function() {
-            return this;
-        }
-    }).extend(NodeDirectability);
-
-    var DualNode = inherits(Node, {
-        factory: function() {
-            return this;
-        }
-    }).extend(NodeDuality);
-
-    var DualDiNode = inherits(Node, {
-        _createLinks: function() {
-            var config = { 'in': new DiLinks(this, Direction['in']), 'out': new DiLinks(this, Direction['out']) };
-            return new DuoGraphContainer(config);
-        },
-        factory: function() {
-            return this;
-        }
-    }).extend(NodeDirectability).extend(NodeDuality);
-
-    var FracNode = inherits(Node, {
-        _createLinks: function()  {
-            return new FracLinks(this);
-        },
-        factory: function() {
-            return this;
-        }
-    }).extend(NodeFractality);
-
-    var FracDiNode = inherits(Node, {
-        _createLinks: function() {
-            var config = { 'in': new FracDiLinks(this, Direction['in']), 'out': new FracDiLinks(this, Direction['out']) };
-            return new DuoGraphContainer(config);
-        },
-        factory: function() {
-            return this;
-        }
-    }).extend(NodeDirectability).extend(NodeFractality);
-
-    var FracDualNode = inherits(DualNode, {
-        _createLinks: function()  {
-            return new FracLinks(this);
-        },
-        factory: function() {
-            return this;
-        }
-    }).extend(NodeFractality);
-
-    var FracDualDiNode = inherits(Node, {
-        _createLinks: function() {
-            var config = { 'in': new FracDiLinks(this, Direction['in']), 'out': new FracDiLinks(this, Direction['out']) };
-            return new DuoGraphContainer(config);
-        },
-        factory: function() {
-            return this;
-        }
-    }).extend(NodeDirectability).extend(NodeDuality).extend(NodeFractality);
-
-
-
 // ---------------- Nodes
 
     var NodesDuality = {
-        statics: {
-            Duality: Duality
-        },
         initialize: function(owner, duality) {
             this._duality = duality;
         },
@@ -497,39 +402,11 @@
         }
     };
 
-    var NodesFractality = {
-        ordinal: function() {
-            return this._owner.ordinal();
-        }
-    };
-
-
-    var Nodes = GraphContainer;
-
-    var DualNodes = inherits(GraphContainer, {
-        factory: function() {
-            return this;
-        }
-    }).extend(NodesDuality);
-
-    var FracNodes = inherits(GraphContainer, {
-        factory: function() {
-            return this;
-        }
-    }).extend(NodesFractality);
-
-    var FracDualNodes = inherits(GraphContainer, {
-        factory: function() {
-            return this;
-        }
-    }).extend(NodesDuality).extend(NodesFractality);
-
-
 
 // ----------------- Graph
     var Graph = GraphObject.extend( {
         initialize: function() {
-            this._nodes = new this.factory().Nodes()
+            this._nodes = this.factory().createNodes(this)
         },
         type: function() {
             return Types.graph;
@@ -557,38 +434,11 @@
         },
         next: function() {
             return this._up.graph();
+        },
+        ordinal: function() {
+            return this._up? this._up.ordinal() - 1 : 0;
         }
     };
-
-    var DualGraph = inherits(Graph, {
-        _createNodes: function() {
-            var config = { 'hvert': new DualNodes(this, Duality['hvert']), 'hedge': new DualNodes(this, Duality['hedge']) };
-            return new DuoGraphContainer(config);
-        },
-        factory: function() {
-            return this;
-        }
-    }).extend(GraphDuality);
-
-    var FracGraph = inherits(Graph, {
-        _createNodes: function() {
-            return new FracNodes(this);
-        },
-        factory: function() {
-            return this;
-        }
-    }).extend(GraphFractality);
-
-    var FracDualGraph = inherits(DualGraph, {
-        _createNodes: function() {
-            var config = { 'hvert': new FracDualNodes(this, Duality['hvert']), 'hedge': new FracDualNodes(this, Duality['hedge']) };
-            return new DuoGraphContainer(config);
-        },
-        factory: function() {
-            return this;
-        }
-    }).extend(GraphFractality);
-
 
 // ----------------- Graph Factory
 
@@ -631,68 +481,107 @@
         constructor: function(config, props) {
             this.config = config;
             this.name = GraphFactory._configToName(config);
-            extend(this, props);
+            FP.extend(this, props);
         }
     });
 
-    GraphFactory.register({name: 'default'}, {
+    var factoryMethods = {
+        createLink: function(label) {
+            return new this.Link(label)
+        },
+        createLinks: function(owner) {
+            return new this.Links(owner)
+        },
+        createNode: function(label) {
+            return new this.Node(label)
+        },
+        createNodes: function(owner) {
+            return new this.Nodes(owner)
+        },
+        createGraph: function(label) {
+            return new this.Graph(label)
+        }
+    };
+
+    GraphFactory.register({name: 'default'}, FP.extend({
         Link: Link,
         Links: Links,
         Node: Node,
         Nodes: Nodes,
         Graph: Graph
-    });
+    }, factoryMethods));
 
-    GraphFactory.register({name: 'default', directed: true}, {
-        createLink: function()  { return new DiLink(this) },
-        createLinks: function() {
-            var config = { 'in': new DiLinks(this, Direction['in']), 'out': new DiLinks(this, Direction['out']) };
-            return new DuoGraphContainer(config);
-        },
-        createNode: function()  { return new DiNode(this)   },
-        createNodes: function() { return new Nodes(this)  },
-        createGraph: function() { return new Graph(this)  },
+    GraphFactory.register({name: 'default', directed: true}, FP.extend({
+        Link: Link.extend({
+            augments: [Directed, LinkDirectability]
+        }),
+        Links: DuoGraphContainer.extend({
+            augments: [Directed],
+            Container: GraphContainer.extend({
+                augments: [Directed, LinksDirectability]
+            }),
+            initialize: function(owner) {
+                this['0'] = this['in'] = new this.Container(owner);
+                this['1'] = this['out'] = new this.Container(owner);
+            }
+        }),
+        Node: Node.extend({
+            augments: [Directed, NodeDirectability]
+        }),
+        Graph: Graph.extend({
+            augments: [Directed]
+        })
+    }, factoryMethods));
 
-        Link: DiLink,
-        Node: DiNode,
-        Graph: Graph
-    });
 
-    GraphFactory.register({name: 'default', dual: true}, {
-        Link: Link,
-        Node: DualNode,
-        Graph: DualGraph
-    });
 
-    GraphFactory.register({name: 'default', fractal: true}, {
-        Link: FracLink,
-        Node: FracNode,
-        Graph: FracGraph
-    });
+    GraphFactory.register({name: 'default', dual: true}, FP.extend({
+        Link: null,
+        Links: null,
+        Node: null,
+        Nodes: null,
+        Graph: null
+    }, factoryMethods));
 
-    GraphFactory.register({name: 'default', directed:true, dual: true}, {
-        Link: DiLink,
-        Node: DualDiNode,
-        Graph: DualGraph
-    });
+    GraphFactory.register({name: 'default', fractal: true}, FP.extend({
+        Link: null,
+        Links: null,
+        Node: null,
+        Nodes: null,
+        Graph: null
+    }, factoryMethods));
 
-    GraphFactory.register({name: 'default', directed:true, fractal: true}, {
-        Link: FracDiLink,
-        Node: FracDiNode,
-        Graph: FracGraph
-    });
+    GraphFactory.register({name: 'default', directed:true, dual: true}, FP.extend({
+        Link: null,
+        Links: null,
+        Node: null,
+        Nodes: null,
+        Graph: null
+    }, factoryMethods));
 
-    GraphFactory.register({name: 'default', dual:true, fractal: true}, {
-        Link: FracLink,
-        Node: FracDualNode,
-        Graph: FracDualGraph
-    });
+    GraphFactory.register({name: 'default', directed:true, fractal: true}, FP.extend({
+        Link: null,
+        Links: null,
+        Node: null,
+        Nodes: null,
+        Graph: null
+    }, factoryMethods));
 
-    GraphFactory.register({name: 'default', directed: true, dual:true, fractal: true}, {
-        Link: FracDiLink,
-        Node: FracDualDiNode,
-        Graph: FracDualGraph
-    });
+    GraphFactory.register({name: 'default', dual:true, fractal: true}, FP.extend({
+        Link: null,
+        Links: null,
+        Node: null,
+        Nodes: null,
+        Graph: null
+    }, factoryMethods));
+
+    GraphFactory.register({name: 'default', directed: true, dual:true, fractal: true}, FP.extend({
+        Link: null,
+        Links: null,
+        Node: null,
+        Nodes: null,
+        Graph: null
+    }, factoryMethods));
 
     return root.G = GraphFactory;
 
