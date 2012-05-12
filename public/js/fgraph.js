@@ -29,7 +29,7 @@
         },
 
         initialize: OOP.composite(function(label, owner) {
-            this._label = label;
+            if (label) this._label = label;
             this._owner = owner;
         }),
 
@@ -161,8 +161,8 @@
         Container: GraphContainer,
 
         initialize: function(label, owner) {
-            this[0] = new this.Container(undefined, owner);
-            this[1] = new this.Container(undefined, owner);
+            this[0] = new this.Container(label + ':0', owner);
+            this[1] = new this.Container(label + ':1', owner);
         },
 
         factory: function() {
@@ -322,19 +322,17 @@
         }
     };
 
-
     var LinksFractality = {
         inverse: function(direction) {
             return this._owner.inverse().links(direction);
         }
     };
 
-
 // --------------- Node
 
     var Node = GraphObject.extend({
         initialize: function(label) {
-            this._links = this.factory().createLinks(label, this);
+            this._links = this.factory().createLinks(label + '::links', this);
         },
         type: function() {
             return Types.node;
@@ -400,14 +398,16 @@
     };
 
     var NodesFractality = {
-
+        up: function(duality) {
+            return this._owner.up().nodes(duality);
+        }
     };
 
 // ----------------- Graph
 
     var Graph = GraphObject.extend( {
         initialize: function(label) {
-            this._nodes = this.factory().createNodes(label, this)
+            this._nodes = this.factory().createNodes(label + '::nodes', this)
         },
         type: function() {
             return Types.graph;
@@ -447,8 +447,6 @@
     var GraphFactory = OOP.Class.extend({
         statics: {
             VERSION: '0.1',
-
-            Config: OOP.enumeration(['directed', 'dual', 'fractal']),
 
             Types: Types,
             Direction: Direction,
@@ -561,13 +559,13 @@
             })
         }),
         Graph: Graph.extend({
-            augments: [Dual]
+            augments: [Dual, GraphDuality]
         })
     });
 
     GraphFactory.register({name: 'default', fractal: true}, {
         Link: Link.extend({
-            augments: [Fractal, LinksFractality]
+            augments: [Fractal, LinkFractality]
         }),
         Links: GraphContainer.extend({
             augments: [Fractal, LinksFractality]
@@ -584,35 +582,93 @@
     });
 
     GraphFactory.register({name: 'default', directed: true, dual: true}, {
-        Link: null,
-        Links: null,
-        Node: null,
-        Nodes: null,
-        Graph: null
+        Link: Link.extend({
+            augments: [Directed, Dual, LinkDirectability]
+        }),
+        Links: DuoGraphContainer.extend({
+            augments: [Directed, Dual],
+            Container: GraphContainer.extend({
+                augments: [Directed, Dual, LinksDirectability]
+            })
+        }),
+        Node: Node.extend({
+            augments: [Directed, Dual, NodeDirectability, NodeDuality]
+        }),
+        Nodes: DuoGraphContainer.extend({
+            augments: [Directed, Dual],
+            Container: GraphContainer.extend({
+                augments: [Directed, Dual, NodesDuality]
+            })
+        }),
+        Graph: Graph.extend({
+            augments: [Directed, Dual, GraphDuality]
+        })
     });
 
     GraphFactory.register({name: 'default', directed:true, fractal: true}, {
-        Link: null,
-        Links: null,
-        Node: null,
-        Nodes: null,
-        Graph: null
+        Link: Link.extend({
+            augments: [Directed, Fractal, LinkDirectability, LinkFractality]
+        }),
+        Links: DuoGraphContainer.extend({
+            augments: [Directed, Fractal, LinksFractality],
+            Container: GraphContainer.extend({
+                augments: [Directed, Fractal, LinksDirectability, LinksFractality]
+            })
+        }),
+        Node: Node.extend({
+            augments: [Directed, Fractal, NodeDirectability, NodeFractality]
+        }),
+        Nodes: GraphContainer.extend({
+            augments: [Directed, Fractal, NodesFractality]
+        }),
+        Graph: Graph.extend({
+            augments: [Directed, Fractal, GraphFractality]
+        })
     });
 
     GraphFactory.register({name: 'default', dual:true, fractal: true}, {
-        Link: null,
-        Links: null,
-        Node: null,
-        Nodes: null,
-        Graph: null
+        Link: Link.extend({
+            augments: [Dual, Fractal, LinkFractality]
+        }),
+        Links: GraphContainer.extend({
+            augments: [Dual, Fractal, LinksFractality]
+        }),
+        Node: Node.extend({
+            augments: [Dual, Fractal, NodeDuality, NodeFractality]
+        }),
+        Nodes: DuoGraphContainer.extend({
+            augments: [Dual, Fractal, NodesFractality],
+            Container: GraphContainer.extend({
+                augments: [Dual, Fractal, NodesDuality, NodesFractality]
+            })
+        }),
+        Graph: Graph.extend({
+            augments: [Dual, Fractal, GraphFractality]
+        })
     });
 
     GraphFactory.register({name: 'default', directed: true, dual:true, fractal: true}, {
-        Link: null,
-        Links: null,
-        Node: null,
-        Nodes: null,
-        Graph: null
+        Link: Link.extend({
+            augments: [Directed, Dual, Fractal, LinkDirectability, LinkFractality]
+        }),
+        Links: DuoGraphContainer.extend({
+            augments: [Directed, Dual, Fractal, LinksFractality],
+            Container: GraphContainer.extend({
+                augments: [Directed, Dual, Fractal, LinksDirectability, LinksFractality]
+            })
+        }),
+        Node: Node.extend({
+            augments: [Directed, Dual, Fractal, NodeDirectability, NodeDuality, NodeFractality]
+        }),
+        Nodes: DuoGraphContainer.extend({
+            augments: [Directed, Dual, Fractal, NodesFractality],
+            Container: GraphContainer.extend({
+                augments: [Directed, Dual, Fractal, NodesDuality, NodesFractality]
+            })
+        }),
+        Graph: Graph.extend({
+            augments: [Directed, Dual, Fractal, GraphDuality, GraphFractality]
+        })
     });
 
     return root.G = GraphFactory;
