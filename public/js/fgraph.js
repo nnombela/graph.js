@@ -158,11 +158,18 @@
     var DuoGraphContainer = GraphObject.extend({
         augments: [Iterability, Accessibility],
 
+        Container: GraphContainer,
+
+        initialize: function(label, owner) {
+            this[0] = new this.Container(undefined, owner);
+            this[1] = new this.Container(undefined, owner);
+        },
+
         factory: function() {
             return this._owner.factory();
         },
-        container: function(name) {
-            return this[name];
+        container: function(enumerator) {
+            return this[enumerator.idx()];
         },
         get: function(index) {
             var size0 = this[0].size();
@@ -185,15 +192,15 @@
         size: function() {
             return this[0].size() + this[1].size();
         },
-        add: function(gobj, name) {
-            return this[name].add(gobj);
+        add: function(gobj, enumerator) {
+            return this.container(enumerator).add(gobj);
         },
-        addNew: function(name) {
-            return name? this[name].addNew() : this[0].addNew();
+        addNew: function(enumerator) {
+            return enumerator? this.container(type).addNew() : this[0].addNew();
         },
-        remove: function(gobj, name) {
-            if (name) {
-                return this[name].remove(gobj);
+        remove: function(gobj, enumerator) {
+            if (enumerator) {
+                return this.container(enumerator).remove(gobj);
             } else {
                 var idx = this[0].remove(gobj);
                 return idx !== -1? idx : this[1].remove(gobj);
@@ -207,7 +214,7 @@
         }
     });
 
-// ---- Links
+// ---- Link
 
     var Link = GraphObject.extend({
         initialize: function() {
@@ -250,19 +257,8 @@
         }
     });
 
-// ----
-    var Directed = {
-        config: {directed: true}
-    };
+// ----- Link augments
 
-    var Fractal = {
-        config: {fractal: true}
-    };
-
-    var Dual = {
-        config: {dual: true}
-    };
-// -----
     var LinkDirectability = {
         statics: {
             Direction: Direction
@@ -308,7 +304,7 @@
         }
     };
 
-// -------------- Links
+// -------------- Links augments
 
     var LinksDirectability = {
         initialize: function(owner, direction) {
@@ -354,6 +350,8 @@
         }
     });
 
+// ----------- Node augments
+
     var NodeDirectability = {
         links: function(direction) {
             return direction? this._links.container(direction.val()) : this._links;
@@ -387,7 +385,7 @@
     };
 
 
-// ---------------- Nodes
+// ---------------- Nodes augments
 
     var NodesDuality = {
         initialize: function(owner, duality) {
@@ -401,8 +399,12 @@
         }
     };
 
+    var NodesFractality = {
+
+    };
 
 // ----------------- Graph
+
     var Graph = GraphObject.extend( {
         initialize: function(label) {
             this._nodes = this.factory().createNodes(label, this)
@@ -418,6 +420,7 @@
         }
     });
 
+// --------------- Graph augments
     var GraphDuality = {
         nodes: function(duality) {
             return duality? this._nodes.container(duality) : this._nodes;
@@ -500,6 +503,18 @@
         }
     });
 
+    var Directed = {
+        config: {directed: true}
+    };
+
+    var Fractal = {
+        config: {fractal: true}
+    };
+
+    var Dual = {
+        config: {dual: true}
+    };
+
     GraphFactory.register({name: 'default'}, {
         Link: Link,
         Links: GraphContainer,
@@ -516,11 +531,7 @@
             augments: [Directed],
             Container: GraphContainer.extend({
                 augments: [Directed, LinksDirectability]
-            }),
-            initialize: function(label, owner) {
-                this['0'] = this['in'] = new this.Container(label? label + ':in' : label, owner);
-                this['1'] = this['out'] = new this.Container(label? label + ':out' : label, owner);
-            }
+            })
         }),
         Node: Node.extend({
             augments: [Directed, NodeDirectability]
@@ -533,25 +544,46 @@
         })
     });
 
-
-
     GraphFactory.register({name: 'default', dual: true}, {
-        Link: null,
-        Links: null,
-        Node: null,
-        Nodes: null,
-        Graph: null
+        Link: Link.extend({
+            augments: [Dual]
+        }),
+        Links: GraphContainer.extend({
+            augments: [Dual]
+        }),
+        Node: Node.extend({
+            augments: [Dual, NodeDuality]
+        }),
+        Nodes: DuoGraphContainer.extend({
+            augments: [Dual],
+            Container: GraphContainer.extend({
+                augments: [Dual, NodesDuality]
+            })
+        }),
+        Graph: Graph.extend({
+            augments: [Dual]
+        })
     });
 
     GraphFactory.register({name: 'default', fractal: true}, {
-        Link: null,
-        Links: null,
-        Node: null,
-        Nodes: null,
-        Graph: null
+        Link: Link.extend({
+            augments: [Fractal, LinksFractality]
+        }),
+        Links: GraphContainer.extend({
+            augments: [Fractal, LinksFractality]
+        }),
+        Node: Node.extend({
+            augments: [Fractal, NodeFractality]
+        }),
+        Nodes: GraphContainer.extend({
+            augments: [Fractal, NodesFractality]
+        }),
+        Graph: Graph.extend({
+            augments: [Fractal, GraphFractality]
+        })
     });
 
-    GraphFactory.register({name: 'default', directed:true, dual: true}, {
+    GraphFactory.register({name: 'default', directed: true, dual: true}, {
         Link: null,
         Links: null,
         Node: null,
@@ -587,29 +619,6 @@
 
 
 }).call(this);
-
-var factory = G.getFactory();
-
-console.log('Factory name: ' + factory.name);
-
-console.log("node children type " + G.Types.node.children().val());
-
-var graph = factory.createGraph('graph1');
-
-
-var node1 = factory.createNode('node1');
-var node2 = factory.createNode('node2');
-
-graph.nodes().add(node1).add(node2);
-
-var link1 = factory.createLink();
-var link2 = factory.createLink();
-
-
-node1.links().add(link1);
-node2.links().add(link2);
-
-link1.bind(link2);
 
 
 

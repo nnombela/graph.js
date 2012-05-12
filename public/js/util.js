@@ -73,7 +73,7 @@
     function compose(func1, func2) {
         return function() {
             var args = func1.apply(this, arguments);
-            return func2.apply(this, args || arguments);
+            return func2.apply(this, args !== undefined? args : arguments);
         };
     }
 
@@ -120,37 +120,6 @@
     }
 
 }).call(this);
-
-//var Parent = OOP.Class.extend({
-//    constructor: function() {
-//        console.log("Parent constructor");
-//        this.initialize();
-//    },
-//    initialize: OOP.composite(function() {
-//        console.log("Parent initialize");
-//    }),
-//    config: OOP.composite({ a: 'a' })
-//});
-//
-//
-//var Child = Parent.extend({
-////    constructor: function() {
-////        console.log("Child constructor");
-////        this.super_.constructor.call(this);
-////    },
-//
-//    initialize: function() {
-//        console.log("Child initialize");
-//    },
-//    config: { b: 'b' }
-//});
-//
-//
-//var parent = new Parent();
-//
-//console.log('---------------');
-//
-//var child = new Child();
 
 
 
