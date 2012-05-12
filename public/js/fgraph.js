@@ -36,7 +36,7 @@
         config: OOP.composite({name: 'default'}),
 
         type: function() {
-            return this._owner.children();
+            return this._owner.type().children();
         },
 
         factory: function() {
@@ -51,7 +51,7 @@
             return this._owner? this._owner.indexOf(this) : -1;
         },
         belongsTo: function(type) {
-            return type === undefined || this.type() === type? this : this._owner.belongsTo(type);
+            return type === undefined || this.type() === type? this._owner : this._owner.belongsTo(type);
         },
         free: function() {
             if (this._owner) this._owner.free(this);
@@ -592,25 +592,25 @@ var factory = G.getFactory();
 
 console.log('Factory name: ' + factory.name);
 
-console.log("children type " + G.Types.node.children().val());
+console.log("node children type " + G.Types.node.children().val());
 
-var graph = factory.createGraph("graph1");
+var graph = factory.createGraph('graph1');
 
-//
-//var node1 = new factory.Node();
-//var node2 = new factory.Node();
-//
-//graph.nodes().add(node1).add(node2);
-//
-//var link1 = new factory.Link();
-//var link2 = new factory.Link();
-//
-//
-//node1.links().add(link1);
-//node2.links().add(link2);
-//
-//link1.bind(link2);
-//
+
+var node1 = factory.createNode('node1');
+var node2 = factory.createNode('node2');
+
+graph.nodes().add(node1).add(node2);
+
+var link1 = factory.createLink();
+var link2 = factory.createLink();
+
+
+node1.links().add(link1);
+node2.links().add(link2);
+
+link1.bind(link2);
+
 
 
 
