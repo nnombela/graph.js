@@ -1,12 +1,12 @@
-var Parent = OOP.Class.extend({
+var Parent = oop.Class.extend({
     constructor: function() {
         console.log("Parent constructor");
         this.initialize();
     },
-    initialize: OOP.composite(function() {
+    initialize: oop.composite(function() {
         console.log("Parent initialize");
     }),
-    config: OOP.composite({ a: 'a' })
+    config: oop.composite({ a: 'a' })
 });
 
 

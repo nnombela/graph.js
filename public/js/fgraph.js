@@ -1,25 +1,27 @@
-(function() {
+var utils = typeof require !== "undefined"? require('./utils') : this;
+
+(function(oop, fp) {
     var root = this;
 
-    var Types = OOP.enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
+    var Types = oop.enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
             return Types.values[Types.values.indexOf(this) + 1];
         }
     });
 
-    var Direction = OOP.enumeration(['in', 'out'], {
+    var Direction = oop.enumeration(['in', 'out'], {
         reverse: function() {
             return this === Direction['in']? Direction['out'] : Direction['out'];
         }
     });
 
-    var Duality =  OOP.enumeration(['hvert', 'hedge'], {
+    var Duality =  oop.enumeration(['hvert', 'hedge'], {
         dual: function() {
             return this === Duality['hvert']? Duality['hedge'] : Duality['hvert'];
         }
     });
 
-    var GraphObject = OOP.Class.extend({
+    var GraphObject = oop.Class.extend({
         statics: {
             Types: Types
         },
@@ -28,12 +30,12 @@
             this.initialize(label, owner);
         },
 
-        initialize: OOP.composite(function(label, owner) {
+        initialize: oop.composite(function(label, owner) {
             if (label) this._label = label;
             this._owner = owner;
         }),
 
-        config: OOP.composite({name: 'default'}),
+        config: oop.composite({name: 'default'}),
 
         type: function() {
             return this._owner.type().children();
@@ -61,7 +63,7 @@
     });
 
     var Iterability = {
-        Iterator: OOP.Class.extend({
+        Iterator: oop.Class.extend({
             constructor: function(container) {
                 this.container = container;
                 this._cursor = -1;
@@ -85,7 +87,7 @@
     };
 
     var Accessibility = {
-        Accessor: OOP.Class.extend({
+        Accessor: oop.Class.extend({
             constructor: function(container) {
                 this.container = container;
                 this.array = [];
@@ -444,7 +446,7 @@
 
 // ----------------- Graph Factory
 
-    var GraphFactory = OOP.Class.extend({
+    var GraphFactory = oop.Class.extend({
         statics: {
             VERSION: '0.1',
 
@@ -477,7 +479,7 @@
         constructor: function(config, props) {
             this.config = config;
             this.name = GraphFactory._configToName(config);
-            FP.extend(this, props);
+            fp.extend(this, props);
         },
 
         create: function(type, label, owner) {
@@ -671,10 +673,12 @@
         })
     });
 
-    return root.G = GraphFactory;
+    var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
+
+    exports.G = GraphFactory;
 
 
-}).call(this);
+}).call(this, utils.oop, utils.fp);
 
 
 

@@ -29,19 +29,20 @@
         })
     };
 
-    return extend(root, {
-        FP: {
+    var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
+
+    extend(exports, {
+        fp: {
             extend: extend,
             inherits: inherits,
             compose: compose
         },
-        OOP: {
+        oop: {
             Class: Class,
             enumeration: enumeration,
             composite: composite
         }
     });
-
 
     //----------------------------------
 
