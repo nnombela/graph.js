@@ -61,11 +61,11 @@
 
     function recursiveExtend(dst, src) {
         return extend(dst, src, function(prop) {
-            if (prop !== 'constructor') {
-                var dstVal = dst[prop], srcVal = src[prop];
-                return dstVal && dstVal.extend? dstVal.extend(srcVal) : srcVal
+            if (prop === 'constructor') {  // don't want to mess with the constructor property
+                return undefined;
             }
-            return undefined;
+            var dstVal = dst[prop], srcVal = src[prop];
+            return dstVal && dstVal.extend? dstVal.extend(srcVal) : srcVal
         });
     }
 

@@ -1,11 +1,10 @@
-var utils = typeof require !== "undefined"? require('./utils') : this;
-
-(function(oop, fp) {
+(function() {
     var root = this;
 
     var Types = oop.enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
-            return Types.values[Types.values.indexOf(this) + 1];
+            var values = Types.values;
+            return values[values.indexOf(this) + 1];
         }
     });
 
@@ -678,7 +677,7 @@ var utils = typeof require !== "undefined"? require('./utils') : this;
     exports.G = GraphFactory;
 
 
-}).call(this, utils.oop, utils.fp);
+}).call(this);
 
 
 
