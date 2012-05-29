@@ -151,7 +151,7 @@
             return idx;
         },
         free: function(gobj) {
-            return gobj? this.remove(gobj) : GraphObject.super_.free.call();
+            return gobj? this.remove(gobj) : this.super_("free");
         }
     });
 
@@ -207,11 +207,14 @@
                 return idx !== -1? idx : this[1].remove(gobj);
             }
         },
-        free: function() {
-            DuoGraphContainer.super_.free.call(this);
-            this[0].free();
-            this[1].free();
-            return this;
+        free: function(gobj) {
+            if (gobj) {
+                return this.remove(gobj);
+            } else {
+                this[0].free();
+                this[1].free();
+                return this.super_('free');
+            }
         }
     });
 
