@@ -1,26 +1,26 @@
 (function() {
     var root = this;
 
-    var Types = oop.enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
+    var Types = OOP.enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
             var values = Types.values;
             return values[values.indexOf(this) + 1];
         }
     });
 
-    var Direction = oop.enumeration(['in', 'out'], {
+    var Direction = OOP.enumeration(['in', 'out'], {
         reverse: function() {
             return this === Direction['in']? Direction['out'] : Direction['out'];
         }
     });
 
-    var Duality =  oop.enumeration(['hvert', 'hedge'], {
+    var Duality =  OOP.enumeration(['hvert', 'hedge'], {
         dual: function() {
             return this === Duality['hvert']? Duality['hedge'] : Duality['hvert'];
         }
     });
 
-    var GraphObject = oop.Class.extend({
+    var GraphObject = OOP.Class.extend({
         statics: {
             Types: Types
         },
@@ -29,12 +29,12 @@
             this.initialize(label, owner);
         },
 
-        initialize: oop.composite(function(label, owner) {
+        initialize: OOP.composite(function(label, owner) {
             if (label) this._label = label;
             this._owner = owner;
         }),
 
-        config: oop.composite({name: 'default'}),
+        config: OOP.composite({name: 'default'}),
 
         type: function() {
             return this._owner.type().children();
@@ -62,7 +62,7 @@
     });
 
     var Iterability = {
-        Iterator: oop.Class.extend({
+        Iterator: OOP.Class.extend({
             constructor: function(container) {
                 this.container = container;
                 this._cursor = -1;
@@ -86,7 +86,7 @@
     };
 
     var Accessibility = {
-        Accessor: oop.Class.extend({
+        Accessor: OOP.Class.extend({
             constructor: function(container) {
                 this.container = container;
                 this.array = [];
@@ -445,7 +445,7 @@
 
 // ----------------- Graph Factory
 
-    var GraphFactory = oop.Class.extend({
+    var GraphFactory = OOP.Class.extend({
         statics: {
             VERSION: '0.1',
 
@@ -478,7 +478,7 @@
         constructor: function(config, props) {
             this.config = config;
             this.name = GraphFactory._configToName(config);
-            fp.extend(this, props);
+            FP.extend(this, props);
         },
 
         create: function(type, label, owner) {

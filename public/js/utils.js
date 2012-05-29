@@ -32,12 +32,12 @@
     var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
 
     extend(exports, {
-        fp: {
+        FP: {
             extend: extend,
             inherits: inherits,
             compose: compose
         },
-        oop: {
+        OOP: {
             Class: Class,
             enumeration: enumeration,
             composite: composite
@@ -45,6 +45,8 @@
     });
 
     //----------------------------------
+
+    var slice = Array.prototype.slice;
 
     function extend(dst, src, exec) {
         exec = exec || function(prop) { return src[prop] };
@@ -87,7 +89,10 @@
 
         Child.prototype = Object.create(Parent.prototype, {
             constructor: { value: Child, enumerable: false },
-            super_: { value: Parent.prototype, enumerable: false}
+            super_: { value: function(name) {
+                var value = Parent.prototype[name];
+                return value && value.apply? value.apply(this, slice.call(arguments, 1)) : value;
+            }, enumerable: false}
         });
 
         Child.parent = Parent;

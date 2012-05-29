@@ -1,0 +1,62 @@
+[
+
+    {"factoryName": "default","graph": {
+        "label": "graph1",
+        "nodes": [
+            {"label": "node1", "links": [
+                {"label": "link1", "pair": "link2"}
+            ]},
+            {"label": "node2", "links": [
+                {"label": "link2", "pair": "link1"}
+            ]}
+        ]
+    }},
+
+    {"factoryName": "default_directed", "graph": {
+        "label": "graph",
+        "nodes": [
+            {"label": "node1", "links": {
+                "in": [
+                    {"label": "link1", "pair": "link2"}
+                ],
+                "out": []
+            }},
+            {"label": "node2", "links": {
+                "in": [],
+                "out": [
+                    {"label": "link2", "pair": "link1", "reverse": "link?"}
+                ]
+            }}
+        ]
+    }},
+
+
+     {"factoryName": "default_dual", "graph": {
+        "label": "graph",
+        "nodes": {
+            "hvert": [
+                {"label": "node1", "links": []}
+            ],
+            "hedge": [
+                {"label": "node2", "links": []}
+            ]
+        }
+    }},
+
+
+    {"factoryName": "default_fractal", "graphs": [{
+        "label": "graph",
+        "ordinal": 0,
+        "up": "node?",
+        "nodes": {
+            "hvert": [
+                {"label": "node1", "down": "graph?", "up": "link?", "links": [
+                    {"label": "link1", "pair": "link?", "down": "node?", "inverse": "link?"}
+                ]}
+            ],
+            "hedge": [
+                {"label": "node2", "links": []}
+            ]
+        }}
+    ]}
+]
