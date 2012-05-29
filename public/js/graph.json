@@ -1,6 +1,6 @@
 [
 
-    {"factoryName": "default","graph": {
+    {"factoryName": "default", "graph": {
         "label": "graph1",
         "nodes": [
             {"label": "node1", "links": [
@@ -46,17 +46,11 @@
 
     {"factoryName": "default_fractal", "graphs": [{
         "label": "graph",
-        "ordinal": 0,
         "up": "node?",
-        "nodes": {
-            "hvert": [
-                {"label": "node1", "down": "graph?", "up": "link?", "links": [
-                    {"label": "link1", "pair": "link?", "down": "node?", "inverse": "link?"}
-                ]}
-            ],
-            "hedge": [
-                {"label": "node2", "links": []}
-            ]
-        }}
-    ]}
+        "nodes": [
+            {"label": "node1", "down": "graph?", "up": "link?", "links": [
+                {"label": "link1", "pair": "link?", "down": "node?", "inverse": "link?"}
+            ]}
+        ]
+    }]}
 ]
