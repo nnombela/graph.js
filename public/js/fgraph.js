@@ -58,6 +58,9 @@
             if (this._owner) this._owner.free(this);
             this._owner = null;
             return this;
+        },
+        toJSON: function() {
+            return { label: this.label() }
         }
     });
 
@@ -152,6 +155,9 @@
         },
         free: function(gobj) {
             return gobj? this.remove(gobj) : this.super_("free");
+        },
+        toJSON: function(json) {
+            return this._children;
         }
     });
 
@@ -258,6 +264,10 @@
                 pair[prop] = null;
                 this[prop] = null;
             }
+        },
+        toJSON: function(json) {
+            json.pair = this.pair().label();
+            return json
         }
     });
 
@@ -284,6 +294,10 @@
 
         direction: function() {
             return this._owner.direction();
+        },
+        toJSON: function(json) {
+            json.reverse = this.reverse().label();
+            return json
         }
     };
 
@@ -305,6 +319,11 @@
 
         down: function() {
             return this._down;
+        },
+        toJSON: function(json) {
+            json.inverse = this.inverse().label();
+            json.down = this.down().label();
+            return json
         }
     };
 
@@ -349,6 +368,10 @@
         },
         indexOf: function(links) {
             return this._links === links? 0 : -1;
+        },
+        toJSON: function(json) {
+            json.links = this.links().toJSON();
+            return json
         }
     });
 

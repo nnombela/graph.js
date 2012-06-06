@@ -13,7 +13,7 @@
     }},
 
     {"factoryName": "default_directed", "graph": {
-        "label": "graph",
+        "label": "graph1",
         "nodes": [
             {"label": "node1", "links": {
                 "in": [
@@ -32,7 +32,7 @@
 
 
      {"factoryName": "default_dual", "graph": {
-        "label": "graph",
+        "label": "graph1",
         "nodes": {
             "hvert": [
                 {"label": "node1", "links": []}
@@ -45,7 +45,7 @@
 
 
     {"factoryName": "default_fractal", "graphs": [{
-        "label": "graph",
+        "label": "graph1",
         "up": "node?",
         "nodes": [
             {"label": "node1", "down": "graph?", "up": "link?", "links": [

@@ -76,7 +76,7 @@ var Circle = Point.extend( {
 
 x = {};
 x.foo = "foo";
-x.toJSON = function() { return "bar"; };
+x.toJSON = function() { return { bar: "BAR" }; };
 var json1 = JSON.stringify(x);
 
 console.log('JSON: ' + json1);
