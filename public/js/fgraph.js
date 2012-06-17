@@ -1,7 +1,7 @@
 (function() {
     var root = this;
 
-    var Types = OOP.enumeration(['graph', 'nodes', 'node', 'links', 'link'], {
+    var Types = OOP.enumeration(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
             var values = Types.values;
             return values[values.indexOf(this) + 1];
@@ -45,8 +45,12 @@
         },
 
         label: function() {
-            return this._label? this._label : this._owner?
-                    this._owner.label() + '::' + this.type().val() + ':' + this.index() : this.type().val();
+            if (this._label) {
+                return this._label;
+            } else {
+                var label =  this._owner? this._owner.label(true) : this.type().val();
+                return label  + ':' + this.index();
+            }
         },
         index: function() {
             return this._owner? this._owner.indexOf(this) : -1;
@@ -59,9 +63,9 @@
             this._owner = null;
             return this;
         },
-        toJSON: function() {
-            return { label: this.label() }
-        }
+        toJSON: OOP.composite(function() {
+            return { label: this.label() };
+        })
     });
 
     var Iterability = {
@@ -157,7 +161,9 @@
             return gobj? this.remove(gobj) : this.super_("free");
         },
         toJSON: function(json) {
-            return this._children;
+            return this._children.map(function(elem) {
+                return elem.toJSON()
+            })
         }
     });
 
@@ -221,6 +227,9 @@
                 this[1].free();
                 return this.super_('free');
             }
+        },
+        toJSON: function(json) {
+            return {'0': this[0].toJSON(), '1': this[1].toJSON() };
         }
     });
 
@@ -266,7 +275,9 @@
             }
         },
         toJSON: function(json) {
-            json.pair = this.pair().label();
+            if (this._pair) {
+                json.pair = this._pair.label();
+            }
             return json
         }
     });
@@ -296,7 +307,9 @@
             return this._owner.direction();
         },
         toJSON: function(json) {
-            json.reverse = this.reverse().label();
+            if (this._reverse) {
+                json.reverse = this._reverse.label();
+            }
             return json
         }
     };
@@ -321,8 +334,12 @@
             return this._down;
         },
         toJSON: function(json) {
-            json.inverse = this.inverse().label();
-            json.down = this.down().label();
+            if (this._inverse) {
+                json.inverse = this._inverse.label();
+            }
+            if (this._down) {
+                json.down = this._down.label();
+            }
             return json
         }
     };
@@ -342,6 +359,9 @@
 
         direction: function() {
             return this._direction;
+        },
+        toJSON: function(json) {
+            return { in: json[0], out: json[1] }
         }
     };
 
@@ -380,6 +400,10 @@
     var NodeDirectability = {
         links: function(direction) {
             return direction? this._links.container(direction.val()) : this._links;
+        },
+        direction: function(links) {
+            return this._links.container(Direction.in) === links? Direction.in :
+                    this._links.container(Direction.out) === links? Direction.out : undefined;
         }
     };
 
@@ -397,6 +421,15 @@
         },
         up: function() {
             return this._up;
+        },
+        toJSON: function(json) {
+            if (this._up) {
+                json.up = this._up.label();
+            }
+            if (this._down) {
+                json.down = this._down.label();
+            }
+            return json;
         }
     };
 
@@ -421,6 +454,9 @@
         },
         duality: function() {
             return this._duality;
+        },
+        toJSON: function(json) {
+            return { hvert: json[0], hedge: json[1] }
         }
     };
 
@@ -444,10 +480,20 @@
         },
         indexOf: function(nodes) {
             return this._nodes === nodes? 0 : -1;
+        },
+        toJSON: function(json) {
+            json.nodes = this.nodes().toJSON();
+            return json
         }
     });
 
 // --------------- Graph augments
+    var Graphs = GraphContainer.extend({
+        type: function() {
+            return Types.graphs;
+        }
+    });
+
     var GraphDuality = {
         nodes: function(duality) {
             return duality? this._nodes.container(duality) : this._nodes;
@@ -464,8 +510,19 @@
         next: function() {
             return this._up.graph();
         },
+        all: function() {
+            var container = new Graphs("graphs", this);
+            container.add(this);
+            return container; // TODO Traverse the set of graphs and return them as and array
+        },
         ordinal: function() {
             return this._up? this._up.ordinal() - 1 : 0;
+        },
+        toJSON: function(json) {
+            if (this._up) {
+                json.up = this._up.label();
+            }
+            return json;
         }
     };
 

@@ -20,3 +20,5 @@ node1.links().add(link1);
 node2.links().add(link2);
 
 link1.bind(link2);
+
+console.log("" + G.json.stringify(graph, "  "));

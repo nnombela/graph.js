@@ -73,8 +73,9 @@
 
     function compose(func1, func2) {
         return function() {
-            var args = func1.apply(this, arguments);
-            return func2.apply(this, args !== undefined? args : arguments);
+            var f1 = func1.apply(this, arguments);
+            var args = f1 !== undefined? Array.isArray(f1)? f1 : [f1] : arguments;
+            return func2.apply(this, args);
         };
     }
 
