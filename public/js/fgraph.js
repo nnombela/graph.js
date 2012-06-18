@@ -510,10 +510,12 @@
         next: function() {
             return this._up.graph();
         },
-        all: function() {
-            var container = new Graphs("graphs", this);
-            container.add(this);
-            return container; // TODO Traverse the set of graphs and return them as and array
+        root: function() {
+            var root = this;
+            while(root.up()) {
+                root = root.next();
+            }
+            return root;
         },
         ordinal: function() {
             return this._up? this._up.ordinal() - 1 : 0;
