@@ -2,7 +2,7 @@
     var root = this;
 
     var Class = extend(function() {}, {
-        augment: function(props) {
+        augment: function(props) {  // This is also called mixin
             recursiveExtend(this.prototype, props);
             return this;
         },
@@ -99,6 +99,12 @@
         Child.parent = Parent;
 
         return Child;
+    }
+
+    function mixin(constructor, props) {
+        return extend(constructor.prototype, props, function(prop) {
+            return props.hasOwnProperty(prop)? src[prop] : undefined;
+        });
     }
 
     function enumeration(array, props) {

@@ -154,6 +154,7 @@
             var idx = this.indexOf(gobj);
             if (idx !== -1) {
                 this._children.splice(idx, 1);
+                gobj._owner = null;
             }
             return idx;
         },
@@ -427,7 +428,7 @@
                 json.up = this._up.label();
             }
             if (this._down) {
-                json.down = this._down.label();
+                json.down = this._down.toJSON(); // TODO, expand hear
             }
             return json;
         }
@@ -512,10 +513,14 @@
         },
         root: function() {
             var root = this;
-            while(root.up()) {
+
+            while(!root.isRoot()) {
                 root = root.next();
             }
             return root;
+        },
+        isRoot: function() {
+            return this._up === null;
         },
         ordinal: function() {
             return this._up? this._up.ordinal() - 1 : 0;
