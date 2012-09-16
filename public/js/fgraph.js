@@ -428,7 +428,7 @@
                 json.up = this._up.label();
             }
             if (this._down) {
-                json.down = this._down.toJSON(); // TODO, expand hear
+                json.down = this._down.label(); // TODO, maybe expand here
             }
             return json;
         }
@@ -519,11 +519,18 @@
             }
             return root;
         },
+        graphs: function() {
+            var graphs = [];
+            var root = this.root();
+            graphs.push(root);
+            // TODO Traverse the root graph
+            return graphs;
+        },
         isRoot: function() {
             return this._up === null;
         },
         ordinal: function() {
-            return this._up? this._up.ordinal() - 1 : 0;
+            return this._up? this.next().ordinal() + 1 : 0;
         },
         toJSON: function(json) {
             if (this._up) {
