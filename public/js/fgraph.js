@@ -1,10 +1,11 @@
 (function() {
-    var root = this;
-
     var Types = OOP.enumeration(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
             var values = Types.values;
             return values[values.indexOf(this) + 1];
+        },
+        class: function() {
+           return this.value.charAt(0).toUpperCase() + this.value.slice(1);  // capitalize
         }
     });
 
@@ -65,6 +66,9 @@
         },
         toJSON: OOP.composite(function() {
             return { label: this.label() };
+        }),
+        fromJSON: OOP.composite(function(owner) {
+            return this.factory().create(this.type(), this.label(), owner);
         })
     });
 
@@ -148,7 +152,7 @@
             }
         },
         addNew: function() {
-            return this.add(new this.factory().create(this.type().children()))
+            return this.add(this.factory().create(this.type().children()))
         },
         remove: function(gobj) {
             var idx = this.indexOf(gobj);
@@ -489,6 +493,7 @@
     });
 
 // --------------- Graph augments
+
     var Graphs = GraphContainer.extend({
         type: function() {
             return Types.graphs;
@@ -558,6 +563,9 @@
             getFactory: function(config) {
                 return GraphFactory[GraphFactory._configToName(config || {})];
             },
+            getFactoryByName: function(name) {
+                return GraphFactory[name]
+            },
             _configToName: function(config) {
                 var name = config.name || 'default';
                 if (config.directed) {
@@ -579,7 +587,7 @@
         },
 
         create: function(type, label, owner) {
-            return new this[type.val().toUpperCase()](label, owner);
+            return new this[type.class()](label, owner);
         },
 
         createLink: function(label, owner) {
@@ -769,7 +777,7 @@
         })
     });
 
-    var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
+    var exports = typeof exports !== "undefined"? exports : this;   // CommonJS module support
 
     exports.G = GraphFactory;
 

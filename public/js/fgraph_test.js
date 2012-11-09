@@ -10,7 +10,7 @@ var graph = factory.createGraph('graph1');
 var node1 = factory.createNode('node1');
 var node2 = factory.createNode('node2');
 
-graph.nodes().add(node1).add(node2);
+graph.nodes().add(node1).add(node2).addNew();
 
 var link1 = factory.createLink();
 var link2 = factory.createLink();

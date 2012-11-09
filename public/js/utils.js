@@ -1,6 +1,4 @@
 (function() {
-    var root = this;
-
     var Class = extend(function() {}, {
         augment: function(props) {  // This is also called mixin
             recursiveExtend(this.prototype, props);
@@ -21,6 +19,8 @@
 
     var composite = function(obj) {
         return extend(obj, {
+            // Extend object with an extend method that will compose object or function, in case of object it will use
+            // the prototype chain, in case of function it will use a function closure
             extend: function(obj) {
                 var instance = (obj instanceof Function)? recursiveExtend(compose(this, obj), this):
                         Object.create(this);
@@ -29,7 +29,7 @@
         })
     };
 
-    var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
+    var exports = typeof exports !== "undefined"? exports : this;   // CommonJS module support
 
     extend(exports, {
         FP: {
