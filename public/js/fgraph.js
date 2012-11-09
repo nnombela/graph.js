@@ -152,7 +152,9 @@
             }
         },
         addNew: function() {
-            return this.add(this.factory().create(this.type().children()))
+            var gobj = this.factory().create(this.type().children());
+            this.add(gobj);
+            return gobj;
         },
         remove: function(gobj) {
             var idx = this.indexOf(gobj);
