@@ -249,9 +249,9 @@
         toJSON: function() {
             return {'0': this[0].toJSON(), '1': this[1].toJSON() };
         },
-        fromJSON: function(json) {
-            this[0].fromJSON(json['0']);
-            this[1].fromJSON(json['1']);
+        fromJSON: function(json, map) {
+            this[0].fromJSON(json['0'], map);
+            this[1].fromJSON(json['1'], map);
         }
     });
 

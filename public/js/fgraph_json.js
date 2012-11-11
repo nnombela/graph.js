@@ -6,18 +6,18 @@
     json.stringify = function(gobj, space) {
         var result =  {};
         result.factory = gobj.factory().name;
-        result[gobj.type().val()] = gobj.toJSON();
+        result.type = gobj.type().val();
+        result.value = gobj.toJSON();
 
         return JSON.stringify(result, null, space);
     };
 
     json.parse = function(str) {
         var obj = JSON.parse(str);
+        var factory = G[obj.factory];
 
-        var factory = G.getFactoryByName(obj.factory);
-        var gobj = factory.create(G.Types['graph']);
-
-        gobj.fromJSON(obj.graph, Object.create(null));
+        var gobj = factory.create(G.Types[obj.type]);
+        gobj.fromJSON(obj.value, Object.create(null));
         return gobj;
     };
 
