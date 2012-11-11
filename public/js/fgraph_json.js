@@ -14,10 +14,11 @@
 
     json.parse = function(str) {
         var obj = JSON.parse(str);
-        var factory = G[obj.factory];
+        var factory = G.getFactoryByName(obj.factory);
 
         var gobj = factory.create(G.Types[obj.type]);
         gobj.fromJSON(obj.value, Object.create(null));
+
         return gobj;
     };
 

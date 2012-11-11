@@ -66,6 +66,27 @@
             this._owner = null;
             return this;
         },
+
+        // ---- Private methods
+        _bind: function(thisProp, that, thatProp) {
+            thatProp = thatProp || thisProp;
+            if (this[thisProp] === null && that[thatProp] === null) {
+                this[thisProp] = that;
+                that[thatProp] = this;
+            } else if (this[thisProp] !== that || that[thatProp] !== this) {
+                throw new Error('Not able to bind objects ( ' + this.label() + ', ' + that.label() + ')')
+            }
+        },
+        _unbind: function(thisProp, thatProp) {
+            thatProp = thatProp || thisProp;
+            var that = this[thisProp];
+            if (that !== null && that[thatProp] === this) {
+                that[thatProp] = null;
+                this[thisProp] = null;
+            }
+        },
+
+
         toJSON: OOP.composite(function() {
             return { label: this.label() };
         }),
@@ -250,8 +271,12 @@
             return {'0': this[0].toJSON(), '1': this[1].toJSON() };
         },
         fromJSON: function(json, map) {
-            this[0].fromJSON(json['0'], map);
-            this[1].fromJSON(json['1'], map);
+            if (json['0']) {
+                this[0].fromJSON(json['0'], map);
+            }
+            if (json['1']) {
+                this[1].fromJSON(json['1'], map);
+            }
         }
     });
 
@@ -279,22 +304,6 @@
         },
         pair: function() {
             return this._pair;
-        },
-        // ---- Private methods
-        _bind: function(prop, pair) {
-            if (this[prop] === null && pair[prop] === null) {
-                this[prop] = pair;
-                pair[prop] = this;
-            } else if (this[prop] !== pair || pair[prop] !== this) {
-                throw new Error('Not able to bind links ( ' + this.label() + ', ' + pair.label() + ')')
-            }
-        },
-        _unbind: function(prop) {
-            var pair = this[prop];
-            if (pair !== null) {
-                pair[prop] = null;
-                this[prop] = null;
-            }
         },
         toJSON: function(json) {
             if (this._pair) {
@@ -361,6 +370,12 @@
         unbindInverse: function() {
             this._unbind('_inverse')
         },
+        bindDown: function(pair) {
+            this._bind('_down', pair, '_up');
+        },
+        unbindDown: function() {
+            this._unbind('_down', '_up')
+        },
 
         down: function() {
             return this._down;
@@ -378,8 +393,8 @@
             if (json.inverse && map[json.inverse]) {
                 this.bindInverse(map[json.inverse]);
             }
-            if (json.down) {
-                this._down = map[json.down]; // Review: map[json.down] should always exists
+            if (json.down && map[json.down]) {
+                this.bindDown(map[json.down]);
             }
         }
     };
@@ -401,10 +416,15 @@
             return this._direction;
         },
         toJSON: function(json) {
-            return { in: json[0], out: json[1] }
+            return { 'in': json[0], 'out': json[1] }
         },
         fromJSON: function(json, map) {
-            // TODO
+            if (json['in']) {
+                this['in'].fromJSON(json['in'], map);
+            }
+            if (json['out']) {
+                this['out'].fromJSON(json['out'], map);
+            }
         }
     };
 
@@ -468,6 +488,18 @@
         up: function() {
             return this._up;
         },
+        bindDown: function(pair) {
+            this._bind('_down', pair, '_up');
+        },
+        unbindDown: function() {
+            this._unbind('_down', '_up')
+        },
+        bindUp: function(pair) {
+            this._bind('_up', pair, '_down');
+        },
+        unbindUp: function() {
+            this._unbind('_up', '_down')
+        },
         toJSON: function(json) {
             if (this._up) {
                 json.up = this._up.label();
@@ -476,6 +508,17 @@
                 json.down = this._down.label();
             }
             return json;
+        },
+        fromJSON: function(json, map) {
+            if (json.inverse && map[json.inverse]) {
+                this.bindInverse(map[json.inverse]);
+            }
+            if (json.down && map[json.down]) {
+                this.bindDown(map[json.down]);
+            }
+            if (json.up && map[json.up]) {
+                this.bindUp(map[json.up]);
+            }
         }
     };
 
@@ -502,7 +545,15 @@
             return this._duality;
         },
         toJSON: function(json) {
-            return { hvert: json[0], hedge: json[1] }
+            return { 'hvert': json[0], 'hedge': json[1] }
+        },
+        fromJSON: function(json, map) {
+            if (json['hvert']) {
+                this['hvert'].fromJSON(json['hvert'], map);
+            }
+            if (json['hedge']) {
+                this['hedge'].fromJSON(json['hedge'], map);
+            }
         }
     };
 
@@ -536,12 +587,6 @@
     });
 
 // --------------- Graph augments
-
-    var Graphs = GraphContainer.extend({
-        type: function() {
-            return Types.graphs;
-        }
-    });
 
     var GraphDuality = {
         nodes: function(duality) {
@@ -580,13 +625,32 @@
         ordinal: function() {
             return this._up? this.next().ordinal() + 1 : 0;
         },
+        bindUp: function(pair) {
+            this._bind('_up', pair, '_down');
+        },
+        unbindUp: function() {
+            this._unbind('_up', '_down')
+        },
         toJSON: function(json) {
             if (this._up) {
                 json.up = this._up.label();
             }
             return json;
+        },
+        fromJSON: function(json, map) {
+            if (json.up && map[json.up]) {
+                this.bindUp(map[json.up]);
+            }
         }
     };
+
+// -----------  Graphs
+
+    var Graphs = GraphContainer.extend({
+        type: function() {
+            return Types.graphs;
+        }
+    });
 
 // ----------------- Graph Factory
 
