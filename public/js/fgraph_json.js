@@ -1,22 +1,29 @@
-(function(G) {
+(function() {
+    var G = this.G || {};
+
     var json = {};
 
     json.stringify = function(gobj, space) {
         var result =  {};
-        result.factoryName = gobj.factory().name;
-        result.type = gobj.type().val();
-        result.value = gobj.toJSON();
+        result.factory = gobj.factory().name;
+        result[gobj.type().val()] = gobj.toJSON();
+
         return JSON.stringify(result, null, space);
     };
 
-    json.parse = function(obj) {
-        var factory = G.getFactoryByName(obj.factoryName);
-        factory.create(G.Types[obj.type], obj.value.label)
+    json.parse = function(str) {
+        var obj = JSON.parse(str);
+
+        var factory = G.getFactoryByName(obj.factory);
+        var gobj = factory.create(G.Types['graph']);
+
+        gobj.fromJSON(obj.graph, Object.create(null));
+        return gobj;
     };
 
-    var exports = typeof exports !== "undefined"? exports : this;   // CommonJS module support
+    var exports = typeof exports !== "undefined"? exports : G;   // CommonJS module support
 
     exports.json = G.json = json;
 
 
-}).call(this, G);
+}).call(this);

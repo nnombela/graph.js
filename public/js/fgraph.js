@@ -1,4 +1,6 @@
 (function() {
+    var root = this;
+
     var Types = OOP.enumeration(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
             var values = Types.values;
@@ -67,8 +69,11 @@
         toJSON: OOP.composite(function() {
             return { label: this.label() };
         }),
-        fromJSON: OOP.composite(function(owner) {
-            return this.factory().create(this.type(), this.label(), owner);
+        fromJSON: OOP.composite(function(json, map) {
+            if (json.label) {
+                this._label = json.label;
+                map[json.label] = this;
+            }
         })
     });
 
@@ -167,10 +172,16 @@
         free: function(gobj) {
             return gobj? this.remove(gobj) : this.super_("free");
         },
-        toJSON: function(json) {
+        toJSON: function() {
             return this._children.map(function(elem) {
                 return elem.toJSON()
             })
+        },
+        fromJSON: function(json, map) {
+            var container = this;
+            json.forEach(function(child) {
+                container.addNew().fromJSON(child, map);
+            });
         }
     });
 
@@ -235,8 +246,12 @@
                 return this.super_('free');
             }
         },
-        toJSON: function(json) {
+        toJSON: function() {
             return {'0': this[0].toJSON(), '1': this[1].toJSON() };
+        },
+        fromJSON: function(json) {
+            this[0].fromJSON(json['0']);
+            this[1].fromJSON(json['1']);
         }
     });
 
@@ -286,6 +301,11 @@
                 json.pair = this._pair.label();
             }
             return json
+        },
+        fromJSON: function(json, map) {
+            if (json.pair && map[json.pair]) {
+                this.bind(map[json.pair]);
+            }
         }
     });
 
@@ -318,6 +338,11 @@
                 json.reverse = this._reverse.label();
             }
             return json
+        },
+        fromJSON: function(json, map) {
+            if (json.reverse && map[json.reverse]) {
+                this.bindReverse(map[json.reverse]);
+            }
         }
     };
 
@@ -348,6 +373,14 @@
                 json.down = this._down.label();
             }
             return json
+        },
+        fromJSON: function(json, map) {
+            if (json.inverse && map[json.inverse]) {
+                this.bindInverse(map[json.inverse]);
+            }
+            if (json.down) {
+                this._down = map[json.down]; // Review: map[json.down] should always exists
+            }
         }
     };
 
@@ -369,6 +402,9 @@
         },
         toJSON: function(json) {
             return { in: json[0], out: json[1] }
+        },
+        fromJSON: function(json, map) {
+            // TODO
         }
     };
 
@@ -399,6 +435,9 @@
         toJSON: function(json) {
             json.links = this.links().toJSON();
             return json
+        },
+        fromJSON: function(json, map) {
+            this.links().fromJSON(json.links, map);
         }
     });
 
@@ -434,7 +473,7 @@
                 json.up = this._up.label();
             }
             if (this._down) {
-                json.down = this._down.label(); // TODO, maybe expand here
+                json.down = this._down.label();
             }
             return json;
         }
@@ -491,6 +530,8 @@
         toJSON: function(json) {
             json.nodes = this.nodes().toJSON();
             return json
+        }, fromJSON: function(json, map) {
+            this.nodes().fromJSON(json.nodes , map)
         }
     });
 
@@ -779,7 +820,7 @@
         })
     });
 
-    var exports = typeof exports !== "undefined"? exports : this;   // CommonJS module support
+    var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
 
     exports.G = GraphFactory;
 

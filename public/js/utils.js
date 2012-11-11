@@ -1,4 +1,6 @@
 (function() {
+    var root = this;
+
     var Class = extend(function() {}, {
         augment: function(props) {  // This is also called mixin
             recursiveExtend(this.prototype, props);
@@ -29,7 +31,7 @@
         })
     };
 
-    var exports = typeof exports !== "undefined"? exports : this;   // CommonJS module support
+    var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
 
     extend(exports, {
         FP: {

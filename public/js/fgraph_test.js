@@ -20,4 +20,11 @@ var link2 = node2.links().addNew();
 
 link1.bind(link2);
 
-console.log("" + G.json.stringify(graph, "  "));
+var stringify = G.json.stringify(graph, "  ");
+console.log("----");
+console.log("Original: " + stringify);
+
+var graph2 = G.json.parse(stringify);
+
+console.log("----");
+console.log("New: " + G.json.stringify(graph2, "  "));
