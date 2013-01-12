@@ -1,23 +1,24 @@
 (function() {
     var root = this;
 
-    var Types = OOP.enumeration(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
+    var Types = OOP.Enumeration(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
             var values = Types.values;
             return values[values.indexOf(this) + 1];
         },
         class: function() {
-           return this.value.charAt(0).toUpperCase() + this.value.slice(1);  // capitalize
+            var val = this.value;
+            return val.charAt(0).toUpperCase() + val.slice(1);  // capitalize
         }
     });
 
-    var Direction = OOP.enumeration(['in', 'out'], {
+    var Direction = OOP.Enumeration(['in', 'out'], {
         reverse: function() {
             return this === Direction['in']? Direction['out'] : Direction['out'];
         }
     });
 
-    var Duality =  OOP.enumeration(['hvert', 'hedge'], {
+    var Duality =  OOP.Enumeration(['hvert', 'hedge'], {
         dual: function() {
             return this === Duality['hvert']? Duality['hedge'] : Duality['hvert'];
         }
@@ -32,12 +33,12 @@
             this.initialize(label, owner);
         },
 
-        initialize: OOP.composite(function(label, owner) {
+        initialize: OOP.Composite(function(label, owner) {
             if (label) this._label = label;
             this._owner = owner;
         }),
 
-        config: OOP.composite({name: 'default'}),
+        config: OOP.Composite({name: 'default'}),
 
         type: function() {
             return this._owner.type().children();
@@ -51,8 +52,8 @@
             if (this._label) {
                 return this._label;
             } else {
-                var label =  this._owner? this._owner.label(true) : this.type().val();
-                return label  + ':' + this.index();
+                var prefix =  this._owner? this._owner.label() : this.type().val();
+                return prefix  + ':' + this.index();
             }
         },
         index: function() {
@@ -87,10 +88,10 @@
         },
 
 
-        toJSON: OOP.composite(function() {
-            return { label: this.label() };
+        toJSON: OOP.Composite(function() {
+            return [{ label: this.label() }];
         }),
-        fromJSON: OOP.composite(function(json, map) {
+        fromJSON: OOP.Composite(function(json, map) {
             if (json.label) {
                 this._label = json.label;
                 map[json.label] = this;
@@ -332,8 +333,8 @@
         reverse: function() {
             return this._reverse;
         },
-        bindReverse: function(pair) {
-            this._bind('_reverse', pair);
+        bindReverse: function(reverse) {
+            this._bind('_reverse', reverse);
         },
         unbindReverse: function() {
             this._unbind('_reverse')
@@ -370,8 +371,8 @@
         unbindInverse: function() {
             this._unbind('_inverse')
         },
-        bindDown: function(pair) {
-            this._bind('_down', pair, '_up');
+        bindDown: function(down) {
+            this._bind('_down', down, '_up');
         },
         unbindDown: function() {
             this._unbind('_down', '_up')
@@ -488,14 +489,14 @@
         up: function() {
             return this._up;
         },
-        bindDown: function(pair) {
-            this._bind('_down', pair, '_up');
+        bindDown: function(down) {
+            this._bind('_down', down, '_up');
         },
         unbindDown: function() {
             this._unbind('_down', '_up')
         },
-        bindUp: function(pair) {
-            this._bind('_up', pair, '_down');
+        bindUp: function(up) {
+            this._bind('_up', up, '_down');
         },
         unbindUp: function() {
             this._unbind('_up', '_down')
@@ -625,8 +626,8 @@
         ordinal: function() {
             return this._up? this.next().ordinal() + 1 : 0;
         },
-        bindUp: function(pair) {
-            this._bind('_up', pair, '_down');
+        bindUp: function(up) {
+            this._bind('_up', up, '_down');
         },
         unbindUp: function() {
             this._unbind('_up', '_down')

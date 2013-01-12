@@ -7,7 +7,7 @@
         var result =  {};
         result.factory = gobj.factory().name;
         result.type = gobj.type().val();
-        result.value = gobj.toJSON();
+        result.value = gobj.toJSON({});
 
         return JSON.stringify(result, null, space);
     };

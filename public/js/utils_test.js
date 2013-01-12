@@ -3,10 +3,10 @@ var Parent = OOP.Class.extend({
         console.log("Parent constructor");
         this.initialize();
     },
-    initialize: OOP.composite(function() {
+    initialize: OOP.Composite(function() {
         console.log("Parent initialize");
     }),
-    config: OOP.composite({ a: 'a' })
+    config: OOP.Composite({ a: 'a' })
 });
 
 
@@ -29,6 +29,7 @@ console.log('---------------');
 
 var child = new Child();
 
+console.log('---------------');
 
 // --------------------------------------
 
@@ -47,7 +48,7 @@ var Point = OOP.Class.extend({
     }
 });
 
-var Colors = OOP.enumeration(['white', 'black'], {
+var Colors = OOP.Enumeration(['white', 'black'], {
     reverse: function() {
         return this === Colors['white']? Colors['black'] : Colors['white'];
     }
