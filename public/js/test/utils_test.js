@@ -3,18 +3,18 @@ var Parent = OOP.Class.extend({
         console.log("Parent constructor");
         this.initialize();
     },
-    initialize: OOP.Composite(function() {
+    initialize: OOP.Extensible(function() {
         console.log("Parent initialize");
     }),
-    config: OOP.Composite({ a: 'a' })
+    config: OOP.Extensible({ a: 'a' })
 });
 
 
 var Child = Parent.extend({
-//    constructor: function() {
-//        console.log("Child constructor");
-//        this.super_.constructor.call(this);
-//    },
+    constructor: function() {
+        console.log("Child constructor");
+        this._super('constructor');
+    },
 
     initialize: function() {
         console.log("Child initialize");
@@ -67,11 +67,11 @@ var Circle = Point.extend( {
         }
     },
     constructor: function(x, y, radius) {
-        this.super_('constructor', x, y);
+        this._super('constructor', x, y);
         this.radius = radius;
     },
     toString: function(str) {
-        return this.super_('toString') + ':' + this.radius + ', ' + this.color.val();
+        return this._super('toString') + ':' + this.radius + ', ' + this.color.val();
     }
 });
 

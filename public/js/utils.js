@@ -1,5 +1,6 @@
 (function() {
     var root = this;
+    var SLICE = Array.prototype.slice;
 
     var Class = extend(function() {}, {
         augment: function(props) {  // This is also called mixin
@@ -19,35 +20,59 @@
         }
     });
 
-    var Composite = function(obj) {
+    var Extensible = function(obj) {
         return extend(obj, {
-            // Extend object with an extend method that will extend object or function, in case of object it will use
-            // the prototype chain, in case of function the compose
-            extend: function(obj) {
-                var instance = (obj instanceof Function)? recursiveExtend(compose(this, obj), this): Object.create(this);
-                return recursiveExtend(instance, obj);
+            // Extend object with an extend method
+            extend: function(obj) {  // create a new composed object using the prototype chain or compose the function
+                if (this instanceof Function && obj instanceof Function) {
+                    return compose(this, obj);
+                } else {
+                    return recursiveExtend(Object.create(this), obj);
+                }
             }
         })
     };
 
+    var Enumeration = function(array, props) {
+        props = extend(props || {}, {
+            constructor: function(value, index) {
+                this.value = value;
+                this.index = index;
+            },
+            val: function() {
+                return this.value;
+            },
+            idx: function() {
+                return this.index;
+            }
+        });
+
+        var Enum = Class.extend(props);
+
+        var index = -1;
+        Enum.values = array.map(function(elem) {
+            return Enum[elem] = new Enum(elem, ++index)
+        });
+        return Enum;
+    };
+
     var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
 
-    extend(exports, {
+    return extend(exports, {
         FP: {
             extend: extend,
             inherits: inherits,
-            compose: compose
+            compose: compose,
+            mixin: mixin
         },
         OOP: {
             Class: Class,
             Enumeration: Enumeration,
-            Composite: Composite
+            Extensible: Extensible
         }
     });
 
-    //----------------------------------
-
-    var SLICE = Array.prototype.slice;
+    //----------------------------------   Functions
 
     function extend(dst, src, exec) {
         exec = exec || function(prop) { return src[prop] };
@@ -89,7 +114,7 @@
 
         Child.prototype = Object.create(Parent.prototype, {
             constructor: { value: Child, enumerable: false },
-            super_: { value: function(name) {
+            _super: { value: function(name) {
                 var val = Parent.prototype[name];
                 return val && val.apply? val.apply(this, SLICE.call(arguments, 1)) : val;
             }, enumerable: false}
@@ -104,29 +129,6 @@
         return extend(constructor.prototype, props, function(prop) {
             return props.hasOwnProperty(prop)? src[prop] : undefined;
         });
-    }
-
-    function Enumeration(array, props) {
-        props = extend(props || {}, {
-            constructor: function(value, index) {
-                this.value = value;
-                this.index = index;
-            },
-            val: function() {
-                return this.value;
-            },
-            idx: function() {
-                return this.index;
-            }
-        });
-
-        var Enum = Class.extend(props);
-
-        var index = -1;
-        Enum.values = array.map(function(elem) {
-            return Enum[elem] = new Enum(elem, ++index)
-        });
-        return Enum;
     }
 
 }).call(this);

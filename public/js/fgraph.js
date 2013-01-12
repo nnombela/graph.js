@@ -33,12 +33,12 @@
             this.initialize(label, owner);
         },
 
-        initialize: OOP.Composite(function(label, owner) {
+        initialize: OOP.Extensible(function(label, owner) {
             if (label) this._label = label;
             this._owner = owner;
         }),
 
-        config: OOP.Composite({name: 'default'}),
+        config: OOP.Extensible({name: 'default'}),
 
         type: function() {
             return this._owner.type().children();
@@ -88,10 +88,10 @@
         },
 
 
-        toJSON: OOP.Composite(function() {
+        toJSON: OOP.Extensible(function() {
             return [{ label: this.label() }];
         }),
-        fromJSON: OOP.Composite(function(json, map) {
+        fromJSON: OOP.Extensible(function(json, map) {
             if (json.label) {
                 this._label = json.label;
                 map[json.label] = this;
@@ -192,7 +192,7 @@
             return idx;
         },
         free: function(gobj) {
-            return gobj? this.remove(gobj) : this.super_("free");
+            return gobj? this.remove(gobj) : this._super("free");
         },
         toJSON: function() {
             return this._children.map(function(elem) {
@@ -265,7 +265,7 @@
             } else {
                 this[0].free();
                 this[1].free();
-                return this.super_('free');
+                return this._super('free');
             }
         },
         toJSON: function() {
