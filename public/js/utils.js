@@ -24,11 +24,14 @@
         return extend(obj, {
             // Extend object with an extend method
             extend: function(obj) {  // create a new composed object using the prototype chain or compose the function
+                var result;
                 if (this instanceof Function && obj instanceof Function) {
-                    return compose(this, obj);
+                    result = compose(this, obj);
+                    result.__proto__ = this;  // There is no Function.create(this)
                 } else {
-                    return recursiveExtend(Object.create(this), obj);
+                    result = Object.create(this);
                 }
+                return recursiveExtend(result, obj);
             }
         })
     };
