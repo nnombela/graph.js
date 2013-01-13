@@ -89,7 +89,7 @@
 
 
         toJSON: OOP.Extensible(function() {
-            return [{ label: this.label() }];
+            return { label: this.label() };
         }),
         fromJSON: OOP.Extensible(function(json, map) {
             if (json.label) {
@@ -582,7 +582,8 @@
         toJSON: function(json) {
             json.nodes = this.nodes().toJSON();
             return json
-        }, fromJSON: function(json, map) {
+        },
+        fromJSON: function(json, map) {
             this.nodes().fromJSON(json.nodes , map)
         }
     });
