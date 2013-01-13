@@ -20,18 +20,18 @@
         }
     });
 
+    /* By adding (extending) a method "extend" to the Object (or Function) we make it recursive extensible */
     var Extensible = function(obj) {
         return extend(obj, {
-            // Extend object with an extend method
-            extend: function(obj) {  // create a new composed object using the prototype chain or compose the function
-                var result;
+            extend: function(obj) {
+                var instance; // create a new composed object using the prototype chain and composing the function
                 if (this instanceof Function && obj instanceof Function) {
-                    result = compose(this, obj);
-                    result.__proto__ = this;  // There is no Function.create(this)
+                    instance = compose(this, obj);
+                    instance.__proto__ = this;  // There is no Function.create(this)
                 } else {
-                    result = Object.create(this);
+                    instance = Object.create(this);
                 }
-                return recursiveExtend(result, obj);
+                return recursiveExtend(instance, obj);
             }
         })
     };
@@ -96,7 +96,9 @@
                 return undefined;
             }
             var dstVal = dst[prop], srcVal = src[prop];
-            return dstVal && dstVal.extend? dstVal.extend(srcVal) : srcVal;  // if dstVal has an extend property then use it to create the extended object
+
+            // if dstVal exist and has an createExtended function then use it to create the extended object
+            return dstVal && dstVal.extend? dstVal.extend(srcVal) : srcVal;
         });
     }
 
