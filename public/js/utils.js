@@ -105,7 +105,7 @@
     function compose(func1, func2) {
         return function() {
             var f1 = func1.apply(this, arguments);
-            var args = f1 === undefined? arguments : Array.isArray(f1)? f1 : [f1];
+            var args = f1 === undefined? arguments : [f1];
             return func2.apply(this, args);
         };
     }
