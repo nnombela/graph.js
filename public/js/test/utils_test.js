@@ -3,10 +3,10 @@ var Parent = OOP.Class.extend({
         console.log("Parent constructor");
         this.initialize();
     },
-    initialize: OOP.Extensible(function() {
+    initialize: OOP.Composable.make(function() {
         console.log("Parent initialize");
     }),
-    config: OOP.Extensible({ a: 'a' })
+    config: OOP.Composable.make({ a: 'a' })
 });
 
 
@@ -48,7 +48,7 @@ var Point = OOP.Class.extend({
     }
 });
 
-var Colors = OOP.Enumeration(['white', 'black'], {
+var Colors = OOP.Enum.create(['white', 'black'], {
     reverse: function() {
         return this === Colors['white']? Colors['black'] : Colors['white'];
     }
@@ -75,10 +75,9 @@ var Circle = Point.extend( {
     }
 });
 
-x = {};
-x.foo = "foo";
-x.toJSON = function() { return { bar: "BAR" }; };
-var json1 = JSON.stringify(x);
+var point = new Point(10, 10);
+var circle = new Circle(20, 20, 30);
 
-console.log('JSON: ' + json1);
+console.log("Point: " + point);
+console.log("Circle: " + circle);
 

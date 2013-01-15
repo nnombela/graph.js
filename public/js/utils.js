@@ -20,44 +20,46 @@
         }
     });
 
-    /* By adding (extending) a method "extend" to the Object (or Function) we make it recursive extensible */
-    var Extensible = function(obj) {
-        return extend(obj, {
-            extend: function(obj) {
-                var instance; // create a new composed object using the prototype chain and composing the function
-                if (this instanceof Function && obj instanceof Function) {
-                    instance = compose(this, obj);
-                    instance.__proto__ = this;  // There is no Function.create(this)
-                } else {
-                    instance = Object.create(this);
+    var Composable = extend(function() {}, {
+        extend: function(obj) {
+            var instance; // create a new composed object using the prototype chain and composing the function
+            if (this instanceof Function && obj instanceof Function) {
+                instance = compose(this, obj);
+                instance.__proto__ = this;  // There is no Function.create(this)
+            } else {
+                instance = Object.create(this);
+            }
+            return recursiveExtend(instance, obj);
+        },
+        make: function(obj) {
+            return extend(obj, this);
+        }
+    });
+
+    var Enum = extend(function() {}, {
+        create: function(array, props) {
+            props = extend(props || {}, {
+                constructor: function(value, index) {
+                    this.value = value;
+                    this.index = index;
+                },
+                val: function() {
+                    return this.value;
+                },
+                idx: function() {
+                    return this.index;
                 }
-                return recursiveExtend(instance, obj);
-            }
-        })
-    };
+            });
 
-    var Enumeration = function(array, props) {
-        props = extend(props || {}, {
-            constructor: function(value, index) {
-                this.value = value;
-                this.index = index;
-            },
-            val: function() {
-                return this.value;
-            },
-            idx: function() {
-                return this.index;
-            }
-        });
+            var Enum = Class.extend(props);
 
-        var Enum = Class.extend(props);
-
-        var index = -1;
-        Enum.values = array.map(function(elem) {
-            return Enum[elem] = new Enum(elem, ++index)
-        });
-        return Enum;
-    };
+            var index = -1;
+            Enum.values = array.map(function(elem) {
+                return Enum[elem] = new Enum(elem, ++index)
+            });
+            return Enum;
+        }
+    });
 
     var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
 
@@ -70,8 +72,8 @@
         },
         OOP: {
             Class: Class,
-            Enumeration: Enumeration,
-            Extensible: Extensible
+            Enum: Enum,
+            Composable: Composable
         }
     });
 

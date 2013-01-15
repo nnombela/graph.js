@@ -1,24 +1,24 @@
 (function() {
     var root = this;
 
-    var Types = OOP.Enumeration(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
+    var Types = OOP.Enum.create(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
             var values = Types.values;
             return values[values.indexOf(this) + 1];
         },
         class: function() {
             var val = this.value;
-            return val.charAt(0).toUpperCase() + val.slice(1);  // capitalize
+            return val.charAt(0).toUpperCase() + val.slice(1);  // capitalize              
         }
     });
 
-    var Direction = OOP.Enumeration(['in', 'out'], {
+    var Direction = OOP.Enum.create(['in', 'out'], {
         reverse: function() {
             return this === Direction['in']? Direction['out'] : Direction['out'];
         }
     });
 
-    var Duality =  OOP.Enumeration(['hvert', 'hedge'], {
+    var Duality =  OOP.Enum.create(['hvert', 'hedge'], {
         dual: function() {
             return this === Duality['hvert']? Duality['hedge'] : Duality['hvert'];
         }
@@ -33,12 +33,12 @@
             this.initialize(label, owner);
         },
 
-        initialize: OOP.Extensible(function(label, owner) {
+        initialize: OOP.Composable.make(function(label, owner) {
             if (label) this._label = label;
             this._owner = owner;
         }),
 
-        config: OOP.Extensible({name: 'default'}),
+        config: OOP.Composable.make({name: 'default'}),
 
         type: function() {
             return this._owner.type().children();
@@ -88,10 +88,10 @@
         },
 
 
-        toJSON: OOP.Extensible(function() {
+        toJSON: OOP.Composable.make(function() {
             return { label: this.label() };
         }),
-        fromJSON: OOP.Extensible(function(json, map) {
+        fromJSON: OOP.Composable.make(function(json, map) {
             if (json.label) {
                 this._label = json.label;
                 map[json.label] = this;
