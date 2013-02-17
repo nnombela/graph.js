@@ -68,26 +68,7 @@
             return this;
         },
 
-        // ---- Private methods
-        _bind: function(thisProp, that, thatProp) {
-            thatProp = thatProp || thisProp;
-            if (this[thisProp] === null && that[thatProp] === null) {
-                this[thisProp] = that;
-                that[thatProp] = this;
-            } else if (this[thisProp] !== that || that[thatProp] !== this) {
-                throw new Error('Not able to bind objects ( ' + this.label() + ', ' + that.label() + ')')
-            }
-        },
-        _unbind: function(thisProp, thatProp) {
-            thatProp = thatProp || thisProp;
-            var that = this[thisProp];
-            if (that !== null && that[thatProp] === this) {
-                that[thatProp] = null;
-                this[thisProp] = null;
-            }
-        },
-
-
+        // ---- Converting from and to JSON
         toJSON: OOP.Composable.make(function() {
             return { label: this.label() };
         }),
@@ -96,7 +77,26 @@
                 this._label = json.label;
                 map[json.label] = this;
             }
-        })
+        }),
+
+        // ---- Private methods
+        _bind: function(thisProp, that, thatProp) { // "this" is implicit
+            thatProp = thatProp || thisProp; // if not given thatProp will be thisProp, sometimes have same name sometimes have dual names
+            if (this[thisProp] === null && that[thatProp] === null) {
+                this[thisProp] = that;
+                that[thatProp] = this;
+            } else if (this[thisProp] !== that || that[thatProp] !== this) { // it is already bound
+                throw new Error('Not able to bind objects ( ' + this.label() + ', ' + that.label() + ')')
+            }
+        },
+        _unbind: function(thisProp, thatProp) {
+            thatProp = thatProp || thisProp; // if not given thatProp will be thisProp
+            var that = this[thisProp];
+            if (that !== null && that[thatProp] === this) {
+                that[thatProp] = null;
+                this[thisProp] = null;
+            }
+        }
     });
 
     var Iterability = {

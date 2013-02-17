@@ -53,9 +53,8 @@
 
             var Enum = Class.extend(props);
 
-            var index = -1;
-            Enum.values = array.map(function(elem) {
-                return Enum[elem] = new Enum(elem, ++index)
+            Enum.values = array.map(function(elem, idx) {
+                return Enum[elem] = new Enum(elem, idx)
             });
             return Enum;
         }
