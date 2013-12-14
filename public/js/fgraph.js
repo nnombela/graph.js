@@ -6,9 +6,12 @@
             var values = Types.values;
             return values[values.indexOf(this) + 1];
         },
-        class: function() {
+        getClass: function() {
             var val = this.value;
             return val.charAt(0).toUpperCase() + val.slice(1);  // capitalize              
+        },
+        toJSON: function() {
+            return this.value;
         }
     });
 
@@ -87,10 +90,10 @@
             }
         },
 
-
         toJSON: OOP.Composable.make(function() {
             return { label: this.label() };
         }),
+
         fromJSON: OOP.Composable.make(function(json, map) {
             if (json.label) {
                 this._label = json.label;
@@ -178,8 +181,8 @@
                 throw new Error('Incorrect type: ' + gobj.type().val());
             }
         },
-        addNew: function() {
-            var gobj = this.factory().create(this.type().children());
+        addNew: function(label) {
+            var gobj = this.factory().create(this.type().children(), label);
             this.add(gobj);
             return gobj;
         },
@@ -293,9 +296,11 @@
         },
         bind: function(pair) {
             this._bind('_pair', pair);
+            return this;
         },
         unbind: function() {
-            this._unbind('_pair')
+            this._unbind('_pair');
+            return this;
         },
         node: function() {
             return this._owner._owner;
@@ -584,7 +589,7 @@
             return json
         },
         fromJSON: function(json, map) {
-            this.nodes().fromJSON(json.nodes , map)
+            this.nodes().fromJSON(json.nodes, map)
         }
     });
 
@@ -696,7 +701,7 @@
         },
 
         create: function(type, label, owner) {
-            return new this[type.class()](label, owner);
+            return new this[type.getClass()](label, owner);
         },
 
         createLink: function(label, owner) {
@@ -713,6 +718,10 @@
         },
         createGraph: function(label, owner) {
             return new this.Graph(label, owner)
+        },
+
+        toJSON: function() {
+            return {name: this.name, version: this.statics.VERSION };
         }
     });
 

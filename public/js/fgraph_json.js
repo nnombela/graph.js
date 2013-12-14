@@ -3,28 +3,27 @@
 
     var json = {};
 
-    json.stringify = function(gobj, space) {
+    json.stringify = function(gobj, replacer, space) {
         var result =  {};
-        result.factory = gobj.factory().name;
-        result.type = gobj.type().val();
-        result.value = gobj.toJSON({});
+        result.factory = gobj.factory();
+        result.type = gobj.type();
+        result.value = gobj;
 
-        return JSON.stringify(result, null, space);
+        return JSON.stringify(result, replacer, space || "  ");
     };
 
-    json.parse = function(str) {
-        var obj = JSON.parse(str);
-        var factory = G.getFactoryByName(obj.factory);
+    json.parse = function(str, reviver) {
+        var obj = JSON.parse(str, reviver);
 
+        var factory = G.getFactoryByName(obj.factory.name);
         var gobj = factory.create(G.Types[obj.type]);
+
         gobj.fromJSON(obj.value, Object.create(null));
 
         return gobj;
     };
 
-    var exports = typeof exports !== "undefined"? exports : G;   // CommonJS module support
-
-    exports.json = G.json = json;
+    G.JSON = json;
 
 
 }).call(this);
