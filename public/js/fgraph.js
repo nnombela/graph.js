@@ -695,7 +695,7 @@
         },
 
         create: function(type, label, owner) {
-            return new this[type.class()](label, owner);
+            return new this[type.capitalize()](label, owner);
         },
 
         createLink: function(label, owner) {
