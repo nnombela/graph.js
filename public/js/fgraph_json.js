@@ -6,7 +6,7 @@
     json.stringify = function(gobj, replacer, space) {
         var result =  {};
         result.factory = gobj.factory();
-        result.type = gobj.type();
+        result.type = gobj.type().val();
         result.value = gobj;
 
         return JSON.stringify(result, replacer, space || "  ");

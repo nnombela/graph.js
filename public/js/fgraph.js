@@ -6,12 +6,8 @@
             var values = Types.values;
             return values[values.indexOf(this) + 1];
         },
-        getClass: function() {
-            var val = this.value;
-            return val.charAt(0).toUpperCase() + val.slice(1);  // capitalize              
-        },
-        toJSON: function() {
-            return this.value;
+        capitalize: function() {
+            return this.value.charAt(0).toUpperCase() + this.value.slice(1);
         }
     });
 
@@ -701,7 +697,7 @@
         },
 
         create: function(type, label, owner) {
-            return new this[type.getClass()](label, owner);
+            return new this[type.capitalize()](label, owner);
         },
 
         createLink: function(label, owner) {
