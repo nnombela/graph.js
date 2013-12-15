@@ -68,17 +68,17 @@
         },
 
         // ---- Private methods
-        _bind: function(thisProp, that, thatProp) {
-            thatProp = thatProp || thisProp;
+        _bind: function(thisProp, that, thatProp) { // "this" is implicit
+            thatProp = thatProp || thisProp; // if not given thatProp will be thisProp, sometimes have same name sometimes have dual names
             if (this[thisProp] === null && that[thatProp] === null) {
                 this[thisProp] = that;
                 that[thatProp] = this;
-            } else if (this[thisProp] !== that || that[thatProp] !== this) {
+            } else if (this[thisProp] !== that || that[thatProp] !== this) { // it is already bound
                 throw new Error('Not able to bind objects ( ' + this.label() + ', ' + that.label() + ')')
             }
         },
         _unbind: function(thisProp, thatProp) {
-            thatProp = thatProp || thisProp;
+            thatProp = thatProp || thisProp; // if not given thatProp will be thisProp
             var that = this[thisProp];
             if (that !== null && that[thatProp] === this) {
                 that[thatProp] = null;
@@ -177,8 +177,8 @@
                 throw new Error('Incorrect type: ' + gobj.type().val());
             }
         },
-        addNew: function(label) {
-            var gobj = this.factory().create(this.type().children(), label);
+        addNew: function() {
+            var gobj = this.factory().create(this.type().children());
             this.add(gobj);
             return gobj;
         },
@@ -292,11 +292,9 @@
         },
         bind: function(pair) {
             this._bind('_pair', pair);
-            return this;
         },
         unbind: function() {
-            this._unbind('_pair');
-            return this;
+            this._unbind('_pair')
         },
         node: function() {
             return this._owner._owner;
@@ -585,7 +583,7 @@
             return json
         },
         fromJSON: function(json, map) {
-            this.nodes().fromJSON(json.nodes, map)
+            this.nodes().fromJSON(json.nodes , map)
         }
     });
 
@@ -697,7 +695,7 @@
         },
 
         create: function(type, label, owner) {
-            return new this[type.capitalize()](label, owner);
+            return new this[type.class()](label, owner);
         },
 
         createLink: function(label, owner) {
@@ -714,10 +712,6 @@
         },
         createGraph: function(label, owner) {
             return new this.Graph(label, owner)
-        },
-
-        toJSON: function() {
-            return {name: this.name, version: this.statics.VERSION };
         }
     });
 
