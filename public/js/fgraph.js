@@ -1,5 +1,6 @@
 (function() {
-    var root = this;
+    // dependencies
+    var root = this, OOP = this.OOP, FP = this.FP;
 
     var Types = OOP.Enum.create(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
@@ -33,8 +34,8 @@
         },
 
         initialize: OOP.Composable.make(function(label, owner) {
-            if (label) this._label = label;
             this._owner = owner;
+            this._label = label || this._createLabel();
         }),
 
         config: OOP.Composable.make({name: 'default'}),
@@ -48,12 +49,11 @@
         },
 
         label: function() {
-            if (this._label) {
-                return this._label;
-            } else {
-                var prefix =  this._owner? this._owner.label() : this.type().val();
-                return prefix  + ':' + this.index();
-            }
+            return this._label;
+        },
+        _createLabel: function() {
+            var prefix =  this._owner? this._owner.label() : this.type().val();
+            return prefix  + ':' + this.index();
         },
         index: function() {
             return this._owner? this._owner.indexOf(this) : -1;
@@ -168,25 +168,25 @@
         contains: function(gobj) {
             return this.indexOf(gobj) !== -1;
         },
-        add: function(gobj) {
-            if (this.type().children() === gobj.type()) {
-                gobj._owner = this;
+        add: function(gobj, label) {
+            if (!gobj.belongsTo() &&  gobj.type() === this.type().children() ) {
+                gobj.initialize(label, this);
                 this._children.push(gobj);
                 return this;
             } else {
-                throw new Error('Incorrect type: ' + gobj.type().val());
+                throw new Error('This graph object ' + gobj + ' could not be added to ' + this + ' graph container');
             }
         },
-        addNew: function() {
-            var gobj = this.factory().create(this.type().children());
-            this.add(gobj);
+        addNew: function(label) {
+            var gobj = this.factory().create(this.type().children(), label, this);
+            this._children.push(gobj);
             return gobj;
         },
         remove: function(gobj) {
             var idx = this.indexOf(gobj);
             if (idx !== -1) {
                 this._children.splice(idx, 1);
-                gobj._owner = null;
+                gobj.initialize(undefined, null)
             }
             return idx;
         },
@@ -613,18 +613,12 @@
             }
             return root;
         },
-        graphs: function() {
-            var graphs = [];
-            var root = this.root();
-            graphs.push(root);
-            // TODO Traverse the root graph
-            return graphs;
-        },
+        // graphs: function() {}  use belongsTo() instead
         isRoot: function() {
             return this._up === null;
         },
         ordinal: function() {
-            return this._up? this.next().ordinal() + 1 : 0;
+            return this.isRoot()? 0: this.next().ordinal() + 1;
         },
         bindUp: function(up) {
             this._bind('_up', up, '_down');
@@ -652,6 +646,13 @@
             return Types.graphs;
         }
     });
+
+    var GraphsFractality = {
+        root: function() {
+
+
+        }
+    };
 
 // ----------------- Graph Factory
 
