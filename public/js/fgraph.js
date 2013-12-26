@@ -4,11 +4,10 @@
 
     var Types = OOP.Enum.create(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
-            var values = Types.values;
-            return values[values.indexOf(this) + 1];
+            return Types.values[this.idx() + 1];
         },
         capitalize: function() {
-            return this.value.charAt(0).toUpperCase() + this.value.slice(1);
+            return this.val().charAt(0).toUpperCase() + this.val().slice(1);
         }
     });
 
@@ -30,12 +29,14 @@
         },
 
         constructor: function(label, owner) {
-            this.initialize(label, owner);
+            if (label) {
+                this._label = label;
+            }
+            this.initialize(owner);
         },
 
-        initialize: OOP.Composable.make(function(label, owner) {
+        initialize: OOP.Composable.make(function(owner) {
             this._owner = owner;
-            this._label = label || this._createLabel();
         }),
 
         config: OOP.Composable.make({name: 'default'}),
@@ -49,11 +50,7 @@
         },
 
         label: function() {
-            return this._label;
-        },
-        _createLabel: function() {
-            var prefix =  this._owner? this._owner.label() : this.type().val();
-            return prefix  + ':' + this.index();
+            return this._label? this._label : this._createLabel();
         },
         index: function() {
             return this._owner? this._owner.indexOf(this) : -1;
@@ -67,7 +64,22 @@
             return this;
         },
 
+        // ---- JSON
+        toJSON: OOP.Composable.make(function() {
+            return { label: this._label };
+        }),
+
+        fromJSON: OOP.Composable.make(function(json, map) {
+            if (json.label) {
+                this._label = json.label;
+                map[json.label] = this;
+            }
+        }),
+
         // ---- Private methods
+        _createLabel: function() {
+            return this._owner? this._owner.label() + ":" + this._owner.indexOf(this) : this.type().val();
+        },
         _bind: function(thisProp, that, thatProp) { // "this" is implicit
             thatProp = thatProp || thisProp; // if not given thatProp will be thisProp, sometimes have same name sometimes have dual names
             if (this[thisProp] === null && that[thatProp] === null) {
@@ -84,18 +96,7 @@
                 that[thatProp] = null;
                 this[thisProp] = null;
             }
-        },
-
-        toJSON: OOP.Composable.make(function() {
-            return { label: this.label() };
-        }),
-
-        fromJSON: OOP.Composable.make(function(json, map) {
-            if (json.label) {
-                this._label = json.label;
-                map[json.label] = this;
-            }
-        })
+        }
     });
 
     var Iterability = {
@@ -168,9 +169,9 @@
         contains: function(gobj) {
             return this.indexOf(gobj) !== -1;
         },
-        add: function(gobj, label) {
+        add: function(gobj) {
             if (!gobj.belongsTo() &&  gobj.type() === this.type().children() ) {
-                gobj.initialize(label, this);
+                gobj.initialize(this);
                 this._children.push(gobj);
                 return this;
             } else {
@@ -186,7 +187,7 @@
             var idx = this.indexOf(gobj);
             if (idx !== -1) {
                 this._children.splice(idx, 1);
-                gobj.initialize(undefined, null)
+                gobj.initialize(null)
             }
             return idx;
         },
@@ -212,9 +213,9 @@
 
         Container: GraphContainer,
 
-        initialize: function(label, owner) {
-            this[0] = new this.Container(label + ':0', owner);
-            this[1] = new this.Container(label + ':1', owner);
+        initialize: function(owner) {
+            this[0] = new this.Container(undefined, owner);
+            this[1] = new this.Container(undefined, owner);
         },
 
         factory: function() {
@@ -247,8 +248,8 @@
         add: function(gobj, enumerator) {
             return this.container(enumerator).add(gobj);
         },
-        addNew: function(enumerator) {
-            return enumerator? this.container(type).addNew() : this[0].addNew();
+        addNew: function(label, enumerator) {
+            return enumerator? this.container(enumerator).addNew(label) : this[0].addNew(label);
         },
         remove: function(gobj, enumerator) {
             if (enumerator) {
@@ -329,6 +330,14 @@
             this._reverse = null;
         },
 
+        bind: function(pair) {
+            if (this.direction().reverse() == pair.direction()) {
+                this._bind('_pair', pair);
+                // TODO: find reverse and bind in case
+            } else {
+                throw new Error('Incorrect direction: ' + pair.direction());
+            }
+        },
         reverse: function() {
             return this._reverse;
         },
@@ -437,8 +446,8 @@
 // --------------- Node
 
     var Node = GraphObject.extend({
-        initialize: function(label) {
-            this._links = this.factory().createLinks(label + '::links', this);
+        initialize: function() {
+            this._links = this.factory().createLinks(undefined, this);
         },
         type: function() {
             return Types.node;
@@ -465,7 +474,7 @@
 
     var NodeDirectability = {
         links: function(direction) {
-            return direction? this._links.container(direction.val()) : this._links;
+            return direction? this._links.container(direction) : this._links;
         },
         direction: function(links) {
             return this._links.container(Direction.in) === links? Direction.in :
@@ -566,8 +575,8 @@
 // ----------------- Graph
 
     var Graph = GraphObject.extend( {
-        initialize: function(label) {
-            this._nodes = this.factory().createNodes(label + '::nodes', this)
+        initialize: function() {
+            this._nodes = this.factory().createNodes(undefined, this)
         },
         type: function() {
             return Types.graph;
@@ -713,6 +722,9 @@
         },
         createGraph: function(label, owner) {
             return new this.Graph(label, owner)
+        },
+        createGraphs: function(label, owner) {
+            return new this.Graphs(label, owner)
         }
     });
 
@@ -733,7 +745,8 @@
         Links: GraphContainer,
         Node: Node,
         Nodes: GraphContainer,
-        Graph: Graph
+        Graph: Graph,
+        Graphs: Graphs
     });
 
     GraphFactory.register({name: 'default', directed: true}, {
@@ -753,6 +766,9 @@
             augments: [Directed]
         }),
         Graph: Graph.extend({
+            augments: [Directed]
+        }),
+        Graphs: Graphs.extend({
             augments: [Directed]
         })
     });
@@ -775,6 +791,9 @@
         }),
         Graph: Graph.extend({
             augments: [Dual, GraphDuality]
+        }),
+        Graphs: Graphs.extend({
+            augments: [Dual]
         })
     });
 
@@ -793,6 +812,9 @@
         }),
         Graph: Graph.extend({
             augments: [Fractal, GraphFractality]
+        }),
+        Graphs: Graphs.extend({
+            augments: [Fractal]
         })
     });
 
@@ -817,6 +839,9 @@
         }),
         Graph: Graph.extend({
             augments: [Directed, Dual, GraphDuality]
+        }),
+        Graphs: Graphs.extend({
+            augments: [Directed, Dual]
         })
     });
 
@@ -838,6 +863,9 @@
         }),
         Graph: Graph.extend({
             augments: [Directed, Fractal, GraphFractality]
+        }),
+        Graphs: Graphs.extend({
+            augments: [Directed, Fractal]
         })
     });
 
@@ -859,6 +887,9 @@
         }),
         Graph: Graph.extend({
             augments: [Dual, Fractal, GraphFractality]
+        }),
+        Graphs: Graphs.extend({
+            augments: [Dual, Fractal]
         })
     });
 
@@ -883,6 +914,9 @@
         }),
         Graph: Graph.extend({
             augments: [Directed, Dual, Fractal, GraphDuality, GraphFractality]
+        }),
+        Graphs: Graphs.extend({
+            augments: [Directed, Dual, Fractal]
         })
     });
 
