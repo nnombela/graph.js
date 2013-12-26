@@ -6,6 +6,9 @@
         children: function() {
             return Types.values[this.idx() + 1];
         },
+        parent: function() {
+            return Types.values[this.idx() - 1];
+        },
         capitalize: function() {
             return this.val().charAt(0).toUpperCase() + this.val().slice(1);
         }
@@ -48,9 +51,11 @@
         factory: function() {
             return GraphFactory.getFactory(this.config);
         },
-
+        id: function() {
+            return this._owner? this._owner.id() + ":" + this.type().val() + '[' + this._owner.indexOf(this) + ']': this.type().val();
+        },
         label: function() {
-            return this._label? this._label : this._createLabel();
+            return this._label? this._label : this.id();
         },
         index: function() {
             return this._owner? this._owner.indexOf(this) : -1;
@@ -60,26 +65,27 @@
         },
         free: function() {
             if (this._owner) this._owner.free(this);
-            this._owner = null;
             return this;
         },
 
         // ---- JSON
         toJSON: OOP.Composable.make(function() {
-            return { label: this._label };
+            var json = {};
+            if (this._label) {
+                json.label = this._label;
+            }
+            return json;
         }),
 
         fromJSON: OOP.Composable.make(function(json, map) {
             if (json.label) {
                 this._label = json.label;
-                map[json.label] = this;
             }
+            map[this.label()] = this;
         }),
 
         // ---- Private methods
-        _createLabel: function() {
-            return this._owner? this._owner.label() + ":" + this._owner.indexOf(this) : this.type().val();
-        },
+
         _bind: function(thisProp, that, thatProp) { // "this" is implicit
             thatProp = thatProp || thisProp; // if not given thatProp will be thisProp, sometimes have same name sometimes have dual names
             if (this[thisProp] === null && that[thatProp] === null) {
@@ -411,18 +417,11 @@
 // -------------- Links augments
 
     var LinksDirectability = {
-        initialize: function(owner, direction) {
-            this._direction = direction;
-        },
-        index: function() {
-            this._direction.idx();
-        },
         reverse: function() {
-            return this._owner.links(this._direction.reverse());
+            return this._owner.links(this.direction().reverse());
         },
-
         direction: function() {
-            return this._direction;
+            return this._owner.direction(this);
         },
         toJSON: function(json) {
             return { 'in': json[0], 'out': json[1] }
@@ -479,6 +478,9 @@
         direction: function(links) {
             return this._links.container(Direction.in) === links? Direction.in :
                     this._links.container(Direction.out) === links? Direction.out : undefined;
+        },
+        indexOf: function(links) {
+            return this.direction(links).idx();
         }
     };
 
@@ -544,14 +546,11 @@
 // ---------------- Nodes augments
 
     var NodesDuality = {
-        initialize: function(owner, duality) {
-            this._duality = duality;
-        },
         dual: function() {
-            return this._owner.nodes(this._duality.dual());
+            return this._owner.nodes(this.duality().dual());
         },
         duality: function() {
-            return this._duality;
+            return this._owner.duality(this);
         },
         toJSON: function(json) {
             return { 'hvert': json[0], 'hedge': json[1] }
@@ -601,6 +600,13 @@
     var GraphDuality = {
         nodes: function(duality) {
             return duality? this._nodes.container(duality) : this._nodes;
+        },
+        duality: function(nodes) {
+            return this._nodes.container(Duality.hedge) === nodes? Duality.hedge :
+                this._nodes.container(Duality.hvert) === links? Duality.hvert : undefined;
+        },
+        indexOf: function(nodes) {
+            return this.duality(nodes).idx();
         }
     };
 
