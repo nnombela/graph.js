@@ -48,6 +48,9 @@
                 },
                 idx: function() {
                     return this.index;
+                },
+                toString: function() {
+                    return this.value;
                 }
             });
 
