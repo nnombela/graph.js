@@ -16,7 +16,7 @@
 
     var Direction = OOP.Enum.create(['in', 'out'], {
         reverse: function() {
-            return this === Direction['in']? Direction['out'] : Direction['out'];
+            return this === Direction['in']? Direction['out'] : Direction['in'];
         }
     });
 
@@ -38,11 +38,11 @@
             this.initialize(owner);
         },
 
-        initialize: OOP.Composable.make(function(owner) {
+        initialize: OOP.Composable.create(function(owner) {
             this._owner = owner;
         }),
 
-        config: OOP.Composable.make({name: 'default'}),
+        config: OOP.Composable.create({name: 'default'}),
 
         type: function() {
             return this._owner.type().children();
@@ -51,11 +51,11 @@
         factory: function() {
             return GraphFactory.getFactory(this.config);
         },
-        id: function() {
-            return this._owner? this._owner.id() + ":" + this.type().val() + '[' + this._owner.indexOf(this) + ']': this.type().val();
-        },
         label: function() {
-            return this._label? this._label : this.id();
+            return this._label? this._label : this._createLabel();
+        },
+        toString: function() {
+            return this.label();
         },
         index: function() {
             return this._owner? this._owner.indexOf(this) : -1;
@@ -69,7 +69,7 @@
         },
 
         // ---- JSON
-        toJSON: OOP.Composable.make(function() {
+        toJSON: OOP.Composable.create(function() {
             var json = {};
             if (this._label) {
                 json.label = this._label;
@@ -77,7 +77,7 @@
             return json;
         }),
 
-        fromJSON: OOP.Composable.make(function(json, map) {
+        fromJSON: OOP.Composable.create(function(json, map) {
             if (json.label) {
                 this._label = json.label;
             }
@@ -85,6 +85,9 @@
         }),
 
         // ---- Private methods
+        _createLabel: function() {
+            return this._owner? this._owner.label() + ":" + this.type().val() + '[' + this._owner.indexOf(this) + ']': this.type().val();
+        },
 
         _bind: function(thisProp, that, thatProp) { // "this" is implicit
             thatProp = thatProp || thisProp; // if not given thatProp will be thisProp, sometimes have same name sometimes have dual names
@@ -92,7 +95,7 @@
                 this[thisProp] = that;
                 that[thatProp] = this;
             } else if (this[thisProp] !== that || that[thatProp] !== this) { // it is already bound
-                throw new Error('Not able to bind objects ( ' + this.label() + ', ' + that.label() + ')')
+                throw new Error('Not able to bind objects ( ' + this + ', ' + that + ')')
             }
         },
         _unbind: function(thisProp, thatProp) {
@@ -424,14 +427,12 @@
             return this._owner.direction(this);
         },
         toJSON: function(json) {
-            return { 'in': json[0], 'out': json[1] }
+            return json['0'] && json['1']?  { 'in': json[0], 'out': json[1] } : json;
         },
         fromJSON: function(json, map) {
-            if (json['in']) {
-                this['in'].fromJSON(json['in'], map);
-            }
-            if (json['out']) {
-                this['out'].fromJSON(json['out'], map);
+            if (json['in'] && json['out']) {
+                this['0'].fromJSON(json['in'], map);
+                this['1'].fromJSON(json['out'], map);
             }
         }
     };
@@ -477,7 +478,7 @@
         },
         direction: function(links) {
             return this._links.container(Direction.in) === links? Direction.in :
-                    this._links.container(Direction.out) === links? Direction.out : undefined;
+                    this._links.container(Direction.out) === links? Direction.out : Direction['undefined'];
         },
         indexOf: function(links) {
             return this.direction(links).idx();
@@ -681,32 +682,32 @@
 
             register: function(config, props) {
                 var factory = new GraphFactory(config, props);
-                GraphFactory[factory.name] = factory;
+                GraphFactory[factory.fullname] = factory;
                 return factory;
             },
             getFactory: function(config) {
-                return GraphFactory[GraphFactory._configToName(config || {})];
+                return GraphFactory[GraphFactory._configToFullname(config || {})];
             },
-            getFactoryByName: function(name) {
-                return GraphFactory[name]
+            getFactoryByFullname: function(fullname) {
+                return GraphFactory[fullname]
             },
-            _configToName: function(config) {
-                var name = config.name || 'default';
+            _configToFullname: function(config) {
+                var fullname = config.name || 'default';
                 if (config.directed) {
-                    name += '_directed';
+                    fullname += '_directed';
                 }
                 if (config.dual) {
-                    name += '_dual';
+                    fullname += '_dual';
                 }
                 if (config.fractal) {
-                    name += '_fractal';
+                    fullname += '_fractal';
                 }
-                return name;
+                return fullname;
             }
         },
         constructor: function(config, props) {
             this.config = config;
-            this.name = GraphFactory._configToName(config);
+            this.fullname = GraphFactory._configToFullname(config);
             FP.extend(this, props);
         },
 
@@ -760,10 +761,10 @@
             augments: [Directed, LinkDirectability]
         }),
         Links: DuoGraphContainer.extend({
-            augments: [Directed],
-            Container: GraphContainer.extend({
+            augments: [Directed, LinksDirectability],
+            Container: {  // Existing Container has an extend() method so It will compose with this
                 augments: [Directed, LinksDirectability]
-            })
+            }
         }),
         Node: Node.extend({
             augments: [Directed, NodeDirectability]
@@ -791,9 +792,9 @@
         }),
         Nodes: DuoGraphContainer.extend({
             augments: [Dual],
-            Container: GraphContainer.extend({
+            Container: {
                 augments: [Dual, NodesDuality]
-            })
+            }
         }),
         Graph: Graph.extend({
             augments: [Dual, GraphDuality]
@@ -830,18 +831,18 @@
         }),
         Links: DuoGraphContainer.extend({
             augments: [Directed, Dual],
-            Container: GraphContainer.extend({
+            Container: {
                 augments: [Directed, Dual, LinksDirectability]
-            })
+            }
         }),
         Node: Node.extend({
             augments: [Directed, Dual, NodeDirectability, NodeDuality]
         }),
         Nodes: DuoGraphContainer.extend({
             augments: [Directed, Dual],
-            Container: GraphContainer.extend({
+            Container: {
                 augments: [Directed, Dual, NodesDuality]
-            })
+            }
         }),
         Graph: Graph.extend({
             augments: [Directed, Dual, GraphDuality]
@@ -857,9 +858,9 @@
         }),
         Links: DuoGraphContainer.extend({
             augments: [Directed, Fractal, LinksFractality],
-            Container: GraphContainer.extend({
+            Container: {
                 augments: [Directed, Fractal, LinksDirectability, LinksFractality]
-            })
+            }
         }),
         Node: Node.extend({
             augments: [Directed, Fractal, NodeDirectability, NodeFractality]
@@ -887,9 +888,9 @@
         }),
         Nodes: DuoGraphContainer.extend({
             augments: [Dual, Fractal, NodesFractality],
-            Container: GraphContainer.extend({
+            Container: {
                 augments: [Dual, Fractal, NodesDuality, NodesFractality]
-            })
+            }
         }),
         Graph: Graph.extend({
             augments: [Dual, Fractal, GraphFractality]
@@ -905,18 +906,18 @@
         }),
         Links: DuoGraphContainer.extend({
             augments: [Directed, Dual, Fractal, LinksFractality],
-            Container: GraphContainer.extend({
+            Container: {
                 augments: [Directed, Dual, Fractal, LinksDirectability, LinksFractality]
-            })
+            }
         }),
         Node: Node.extend({
             augments: [Directed, Dual, Fractal, NodeDirectability, NodeDuality, NodeFractality]
         }),
         Nodes: DuoGraphContainer.extend({
             augments: [Directed, Dual, Fractal, NodesFractality],
-            Container: GraphContainer.extend({
+            Container: {
                 augments: [Directed, Dual, Fractal, NodesDuality, NodesFractality]
-            })
+            }
         }),
         Graph: Graph.extend({
             augments: [Directed, Dual, Fractal, GraphDuality, GraphFractality]

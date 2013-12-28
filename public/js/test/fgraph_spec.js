@@ -10,7 +10,7 @@ describe("G Default Factory", function() {
     var factory = G.getFactory();
 
     it("Factory name", function() {
-        expect(factory.name).toBe("default");
+        expect(factory.fullname).toBe("default");
 
     });
 

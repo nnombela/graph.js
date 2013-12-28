@@ -5,7 +5,7 @@
 
     json.stringify = function(gobj, replacer, space) {
         var result =  {};
-        result.factory = gobj.factory();
+        result.factory = gobj.factory().fullname;
         result.type = gobj.type().val();
         result.value = gobj;
 
@@ -15,7 +15,7 @@
     json.parse = function(str, reviver) {
         var obj = JSON.parse(str, reviver);
 
-        var factory = G.getFactoryByName(obj.factory.name);
+        var factory = G.getFactoryByFullname(obj.factory);
         var gobj = factory.create(G.Types[obj.type]);
 
         gobj.fromJSON(obj.value, Object.create(null));

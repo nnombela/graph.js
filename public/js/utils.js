@@ -31,7 +31,7 @@
             }
             return recursiveExtend(instance, obj);
         },
-        make: function(obj) {
+        create: function(obj) {
             return extend(obj, this);
         }
     });
@@ -59,6 +59,9 @@
             Enum.values = array.map(function(elem, idx) {
                 return Enum[elem] = new Enum(elem, idx)
             });
+
+            Enum['undefined'] = new Enum(undefined, -1);
+
             return Enum;
         }
     });

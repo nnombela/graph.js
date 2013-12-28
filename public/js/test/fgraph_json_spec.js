@@ -1,4 +1,6 @@
 
+var G = this.G;
+
 describe("G default", function() {
 
     var factory = G.getFactory();
@@ -14,20 +16,18 @@ describe("G default", function() {
     var link1 = factory.createLink('link1');
     node1.links().add(link1);
 
-    var link2 = node2.links().addNew('link2');
+    var link2 = node2.links().addNew();
 
     link1.bind(link2);
 
 
     it("stringify - parse", function() {
         var stringify = G.JSON.stringify(graph);
-        console.log("graph: " + stringify);
+        console.log("stringify: " + stringify);
 
         var graph2 = G.JSON.parse(stringify);
 
-        var stringify2 = G.JSON.stringify(graph);
-
-        console.log("graph2: " + stringify2);
+        var stringify2 = G.JSON.stringify(graph2);
 
         expect(graph.nodes().size()).toBe(graph2.nodes().size());
 
@@ -50,20 +50,18 @@ describe("G default, directed=true", function() {
     var link1 = factory.createLink('link1');
     node1.links(G.Direction.in).add(link1);
 
-    var link2 = node2.links().addNew('link2');
+    var link2 = node2.links(G.Direction.out).addNew('link2');
 
     link1.bind(link2);
 
 
     it("stringify - parse", function() {
         var stringify = G.JSON.stringify(graph);
-        console.log("graph: " + stringify);
+        console.log("stringify: " + stringify);
 
         var graph2 = G.JSON.parse(stringify);
 
-        var stringify2 = G.JSON.stringify(graph);
-
-        console.log("graph2: " + stringify2);
+        var stringify2 = G.JSON.stringify(graph2);
 
         expect(graph.nodes().size()).toBe(graph2.nodes().size());
 

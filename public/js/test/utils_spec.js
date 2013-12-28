@@ -7,10 +7,10 @@ describe("Parent - Child", function() {
             log.push("Parent constructor");
             this.initialize();
         },
-        initialize: OOP.Composable.make(function() {
+        initialize: OOP.Composable.create(function() {
             log.push("Parent initialize");
         }),
-        config: OOP.Composable.make({ a: 'a' })
+        config: OOP.Composable.create({ a: 'a' })
     });
 
 
