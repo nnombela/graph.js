@@ -1,3 +1,6 @@
+//  graph.js 0.9
+//  (c) 2013 nnombela@gmail.com.
+//  Graph library
 (function() {
     // dependencies
     var root = this, OOP = this.OOP, FP = this.FP;
@@ -16,13 +19,13 @@
 
     var Direction = OOP.Enum.create(['in', 'out'], {
         reverse: function() {
-            return this === Direction['in']? Direction['out'] : this === Direction['out']? Direction['in'] : Direction['undefined'];
+            return this === Direction['in']? Direction['out'] :  Direction['in'];
         }
     });
 
     var Duality =  OOP.Enum.create(['hvert', 'hedge'], {
         dual: function() {
-            return this === Duality['hvert']? Duality['hedge'] : this === Duality['hedge']? Duality['hvert'] : Duality['undefined'];
+            return this === Duality['hvert']? Duality['hedge'] : Duality['hvert'];
         }
     });
 
@@ -437,7 +440,7 @@
             return this._owner.direction(this);
         },
         toJSON: function(json) {
-            return json['0'] && json['1']?  { 'in': json[0], 'out': json[1] } : json;
+            return json['0'] && json['1']?  { 'in': json[0], 'out': json[1] } : json;  // rename
         },
         fromJSON: function(json, map) {
             if (json['in'] && json['out']) {
@@ -488,11 +491,11 @@
             return direction? this._links.container(direction) : this._links;
         },
         direction: function(links) {
-            return this._links.container(Direction.in) === links? Direction.in :
-                    this._links.container(Direction.out) === links? Direction.out : Direction['undefined'];
+            return this._links[0] === links? Direction.in : this._links[1] === links? Direction.out : undefined;
         },
         indexOf: function(links) {
-            return this.direction(links).idx();
+            var direction = this.direction(links);
+            return direction? direction.idx() : -1;
         }
     };
 
@@ -618,11 +621,11 @@
             return duality? this._nodes.container(duality) : this._nodes;
         },
         duality: function(nodes) {
-            return this._nodes.container(Duality.hedge) === nodes? Duality.hedge :
-                this._nodes.container(Duality.hvert) === links? Duality.hvert : Duality['undefined'];
+            return this._nodes[0] === nodes? Duality.hedge : this._nodes[1] === nodes? Duality.hvert : undefined;
         },
         indexOf: function(nodes) {
-            return this.duality(nodes).idx();
+            var duality = this.duality(nodes);
+            return duality? duality.idx() : -1;
         }
     };
 

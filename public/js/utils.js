@@ -1,3 +1,7 @@
+//  utils.js 0.9
+//  (c) 2013 nnombela@gmail.com.
+//  A few FP and OOP utility functions and objects
+
 (function() {
     var root = this;
     var SLICE = Array.prototype.slice;
@@ -25,7 +29,7 @@
             var instance; // create a new composed object using the prototype chain and composing the function
             if (this instanceof Function && obj instanceof Function) {
                 instance = compose(this, obj);
-                instance.__proto__ = this;  // There is no Function.create(this)
+                instance.__proto__ = this;  // Unfortunately there is no Function.create(this), why?
             } else {
                 instance = Object.create(this);
             }
@@ -59,8 +63,6 @@
             Enum.values = array.map(function(elem, idx) {
                 return Enum[elem] = new Enum(elem, idx)
             });
-
-            Enum['undefined'] = new Enum(undefined, -1);
 
             return Enum;
         }

@@ -1,5 +1,8 @@
+//  graph_json.js 0.9
+//  (c) 2013 nnombela@gmail.com.
+//  Graph Json library
 (function() {
-    var G = this.G || {};
+    var G = this.G;
 
     var json = {};
 
