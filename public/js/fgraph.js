@@ -68,7 +68,7 @@
             return this._owner? this._owner.indexOf(this) : -1;
         },
         indexOf: function() {
-            return  -1;
+            return -1;
         },
         belongsTo: function(type) {
             return type === undefined || this.type() === type? this._owner : this._owner.belongsTo(type);
@@ -360,7 +360,11 @@
             return this._reverse;
         },
         bindReverse: function(reverse) {
-            this._bind('_reverse', reverse);
+            if (this.belongsTo().reverse() === reverse.belongsTo()) {
+                this._bind('_reverse', reverse);
+            } else {
+                throw new Error("Can not bind reverse")
+            }
         },
         unbindReverse: function() {
             this._unbind('_reverse')
@@ -495,7 +499,7 @@
         },
         indexOf: function(links) {
             var direction = this.direction(links);
-            return direction? direction.idx() : -1;
+            return direction? direction : -1;
         }
     };
 
@@ -625,7 +629,7 @@
         },
         indexOf: function(nodes) {
             var duality = this.duality(nodes);
-            return duality? duality.idx() : -1;
+            return duality? duality : -1;
         }
     };
 

@@ -39,6 +39,8 @@ describe("G default, directed=true", function() {
 
     var factory = G.getFactory({directed: true});
 
+    var D = G.Direction;
+
     var graph = factory.createGraph('graph1');
 
 
@@ -48,11 +50,17 @@ describe("G default, directed=true", function() {
     graph.nodes().add(node1).add(node2).addNew();
 
     var link1 = factory.createLink('link1');
-    node1.links(G.Direction.in).add(link1);
+    node1.links(D.in).add(link1);
+    var link3 = node1.links(D.out).addNew();
 
-    var link2 = node2.links(G.Direction.out).addNew('link2');
+    var link2 = node2.links(D.out).addNew('link2');
+    var link4 = node2.links(D.in).addNew()
 
     link1.bind(link2);
+    link3.bind(link4);
+
+    link1.bindReverse(link3);
+    link2.bindReverse(link4);
 
 
     it("stringify - parse", function() {
