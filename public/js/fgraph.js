@@ -233,6 +233,9 @@
 
         Container: GraphContainer,
 
+        left: '0',
+        right: '1',
+
         initialize: function(owner) {
             this[0] = new this.Container(undefined, owner);
             this[1] = new this.Container(undefined, owner);
@@ -289,15 +292,14 @@
             }
         },
         toJSON: function() {
-            return {'0': this[0].toJSON(), '1': this[1].toJSON() };
+            var json = Object.create(null);
+            json[this.left] = this[0].toJSON();
+            json[this.right] = this[1].toJSON();
+            return json;
         },
         fromJSON: function(json, map) {
-            if (json['0']) {
-                this[0].fromJSON(json['0'], map);
-            }
-            if (json['1']) {
-                this[1].fromJSON(json['1'], map);
-            }
+            this[0].fromJSON(json[this.left], map);
+            this[1].fromJSON(json[this.right], map);
         }
     });
 
@@ -437,6 +439,9 @@
     var LinksDirected = {
         config: {directed: true},
 
+        left: Direction['in'].val(),
+        right: Direction['out'].val(),
+
         reverse: function() {
             return this._owner.links(this.direction().reverse());
         },
@@ -487,14 +492,6 @@
         },
         direction: function(links) {
             return this._links[0] === links? Direction.in : this._links[1] === links? Direction.out : undefined;
-        },
-        toJSON: function(json) {
-            json.links = {'in': json.links['0'], 'out': json.links['1']};
-            return json
-        },
-        fromJSON: function(json, map) {
-            var jsonLinks = {'0': json.links['in'], '1': json.links['out']};
-            this.links().fromJSON(jsonLinks, map);
         },
         indexOf: function(links) {
             var direction = this.direction(links);
