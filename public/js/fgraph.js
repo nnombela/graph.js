@@ -383,8 +383,8 @@
         }
     };
 
-    var LinkFractal = {
-        config: {fractal: true},
+    var LinkMultilevel = {
+        config: { multilevel: true },
 
         initialize: function() {
             this._down = null;
@@ -444,8 +444,8 @@
         }
     };
 
-    var LinksFractal = {
-        config: {fractal: true},
+    var LinksMultilevel = {
+        config: { multilevel: true },
 
         inverse: function(direction) {
             return this._owner.inverse().links(direction);
@@ -493,8 +493,8 @@
         }
     };
 
-    var NodeFractal = {
-        config: {fractal: true},
+    var NodeMultilevel = {
+        config: { multilevel: true },
 
         initialize: function() {
             this._inverse = null;
@@ -568,8 +568,8 @@
         }
     };
 
-    var NodesFractal = {
-        config: {fractal: true},
+    var NodesMultilevel = {
+        config: { multilevel: true },
 
         up: function(duality) {
             return this._owner.up().nodes(duality);
@@ -614,8 +614,8 @@
         }
     };
 
-    var GraphFractal = {
-        config: {fractal: true},
+    var GraphMultilevel = {
+        config: { multilevel: true },
 
         initialize: function() {
             this._up = null;
@@ -668,8 +668,8 @@
         }
     });
 
-    var GraphsFractal = {
-        config: {fractal: true},
+    var GraphsMultilevel = {
+        config: { multilevel: true },
 
         root: function() {
 
@@ -706,8 +706,8 @@
                 if (config.dual) {
                     fullname += '_dual';
                 }
-                if (config.fractal) {
-                    fullname += '_fractal';
+                if (config.multilevel) {
+                    fullname += '_multilevel';
                 }
                 return fullname;
             }
@@ -746,8 +746,8 @@
         config: {directed: true}
     };
 
-    var Fractal = {
-        config: {fractal: true}
+    var Multilevel = {
+        config: { multilevel: true }
     };
 
     var Dual = {
@@ -811,24 +811,24 @@
         })
     });
 
-    GraphFactory.register({name: 'default', fractal: true}, {
+    GraphFactory.register({name: 'default', multilevel: true}, {
         Link: Link.extend({
-            augments: [LinkFractal]
+            augments: [LinkMultilevel]
         }),
         Links: GraphContainer.extend({
-            augments: [LinksFractal]
+            augments: [LinksMultilevel]
         }),
         Node: Node.extend({
-            augments: [NodeFractal]
+            augments: [NodeMultilevel]
         }),
         Nodes: GraphContainer.extend({
-            augments: [NodesFractal]
+            augments: [NodesMultilevel]
         }),
         Graph: Graph.extend({
-            augments: [GraphFractal]
+            augments: [GraphMultilevel]
         }),
         Graphs: Graphs.extend({
-            augments: [GraphsFractal]
+            augments: [GraphsMultilevel]
         })
     });
 
@@ -859,78 +859,78 @@
         })
     });
 
-    GraphFactory.register({name: 'default', directed: true, fractal: true}, {
+    GraphFactory.register({name: 'default', directed: true, multilevel: true}, {
         Link: Link.extend({
-            augments: [LinkDirected, LinkFractal]
+            augments: [LinkDirected, LinkMultilevel]
         }),
         Links: DuoGraphContainer.extend({
-            augments: [LinksDirected, LinksFractal],
+            augments: [LinksDirected, LinksMultilevel],
             Container: {
-                augments: [LinksDirected, LinksFractal]
+                augments: [LinksDirected, LinksMultilevel]
             }
         }),
         Node: Node.extend({
-            augments: [NodeDirected, NodeFractal]
+            augments: [NodeDirected, NodeMultilevel]
         }),
         Nodes: GraphContainer.extend({
-            augments: [Directed, NodesFractal]
+            augments: [Directed, NodesMultilevel]
         }),
         Graph: Graph.extend({
-            augments: [Directed, GraphFractal]
+            augments: [Directed, GraphMultilevel]
         }),
         Graphs: Graphs.extend({
-            augments: [Directed, GraphsFractal]
+            augments: [Directed, GraphsMultilevel]
         })
     });
 
-    GraphFactory.register({name: 'default', dual: true, fractal: true}, {
+    GraphFactory.register({name: 'default', dual: true, multilevel: true}, {
         Link: Link.extend({
-            augments: [Dual, LinkFractal]
+            augments: [Dual, LinkMultilevel]
         }),
         Links: GraphContainer.extend({
-            augments: [Dual, LinksFractal]
+            augments: [Dual, LinksMultilevel]
         }),
         Node: Node.extend({
-            augments: [NodeDual, NodeFractal]
+            augments: [NodeDual, NodeMultilevel]
         }),
         Nodes: DuoGraphContainer.extend({
-            augments: [NodesDual, NodesFractal],
+            augments: [NodesDual, NodesMultilevel],
             Container: {
-                augments: [NodesDual, NodesFractal]
+                augments: [NodesDual, NodesMultilevel]
             }
         }),
         Graph: Graph.extend({
-            augments: [GraphDual, GraphFractal]
+            augments: [GraphDual, GraphMultilevel]
         }),
         Graphs: Graphs.extend({
-            augments: [Dual, GraphsFractal]
+            augments: [Dual, GraphsMultilevel]
         })
     });
 
-    GraphFactory.register({name: 'default', directed: true, dual: true, fractal: true}, {
+    GraphFactory.register({name: 'default', directed: true, dual: true, multilevel: true}, {
         Link: Link.extend({
-            augments: [LinkDirected, Dual, LinkFractal]
+            augments: [LinkDirected, Dual, LinkMultilevel]
         }),
         Links: DuoGraphContainer.extend({
-            augments: [LinksDirected, Dual, LinksFractal],
+            augments: [LinksDirected, Dual, LinksMultilevel],
             Container: {
-                augments: [LinksDirected, Dual, LinksFractal]
+                augments: [LinksDirected, Dual, LinksMultilevel]
             }
         }),
         Node: Node.extend({
-            augments: [NodeDirected, NodeDual, NodeFractal]
+            augments: [NodeDirected, NodeDual, NodeMultilevel]
         }),
         Nodes: DuoGraphContainer.extend({
-            augments: [Directed, NodesDual, NodesFractal],
+            augments: [Directed, NodesDual, NodesMultilevel],
             Container: {
-                augments: [Directed, NodesDual, NodesFractal]
+                augments: [Directed, NodesDual, NodesMultilevel]
             }
         }),
         Graph: Graph.extend({
-            augments: [Directed, GraphDual, GraphFractal]
+            augments: [Directed, GraphDual, GraphMultilevel]
         }),
         Graphs: Graphs.extend({
-            augments: [Directed, Dual, GraphsFractal]
+            augments: [Directed, Dual, GraphsMultilevel]
         })
     });
 
