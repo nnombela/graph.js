@@ -41,7 +41,7 @@
     });
 
     var Enum = extend(function() {}, {
-        create: function(array, props) {
+        create: function(values, props) {
             props = extend(props || {}, {
                 constructor: function(value, index) {
                     this.value = value;
@@ -60,7 +60,9 @@
 
             var Enum = Class.extend(props);
 
-            Enum.values = array.map(function(elem, idx) {
+            Enum.values = values;
+
+            Enum.members = values.map(function(elem, idx) {
                 return Enum[elem] = new Enum(elem, idx)
             });
 

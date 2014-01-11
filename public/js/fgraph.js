@@ -7,10 +7,10 @@
 
     var Types = OOP.Enum.create(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
-            return Types.values[this.idx() + 1];
+            return Types.members[this.idx() + 1];
         },
         parent: function() {
-            return Types.values[this.idx() - 1];
+            return Types.members[this.idx() - 1];
         },
         capitalize: function() {
             return this.val().charAt(0).toUpperCase() + this.val().slice(1);
@@ -80,7 +80,7 @@
 
         // ---- JSON
         toJSON: OOP.Composable.create(function() {
-            var json = {};
+            var json = Object.create(null);
             if (this._label) {
                 json.label = this._label;
             }
@@ -154,7 +154,7 @@
             get: function(gobj) {
                 return this.array[gobj.index()];
             },
-            set: function(gobj, value) {
+            members: function(gobj, value) {
                 this.array[gobj.index()] = value;
             }
         }),
@@ -233,8 +233,7 @@
 
         Container: GraphContainer,
 
-        left: '0',
-        right: '1',
+        names: ['0', '1'],
 
         initialize: function(owner) {
             this[0] = new this.Container(undefined, owner);
@@ -274,13 +273,9 @@
         addNew: function(label, enumerator) {
             return enumerator? this.container(enumerator).addNew(label) : this[0].addNew(label);
         },
-        remove: function(gobj, enumerator) {
-            if (enumerator) {
-                return this.container(enumerator).remove(gobj);
-            } else {
-                var idx = this[0].remove(gobj);
-                return idx !== -1? idx : this[1].remove(gobj);
-            }
+        remove: function(gobj) {
+            var idx = this[0].remove(gobj);
+            return idx !== -1? idx : this[1].remove(gobj);
         },
         free: function(gobj) {
             if (gobj) {
@@ -293,13 +288,13 @@
         },
         toJSON: function() {
             var json = Object.create(null);
-            json[this.left] = this[0].toJSON();
-            json[this.right] = this[1].toJSON();
+            json[this.names[0]] = this[0].toJSON();
+            json[this.names[1]] = this[1].toJSON();
             return json;
         },
         fromJSON: function(json, map) {
-            this[0].fromJSON(json[this.left], map);
-            this[1].fromJSON(json[this.right], map);
+            this[0].fromJSON(json[this.names[0]], map);
+            this[1].fromJSON(json[this.names[1]], map);
         }
     });
 
@@ -439,8 +434,7 @@
     var LinksDirected = {
         config: {directed: true},
 
-        left: Direction['in'].val(),
-        right: Direction['out'].val(),
+        names: Direction.values,
 
         reverse: function() {
             return this._owner.links(this.direction().reverse());
@@ -564,22 +558,13 @@
     var NodesDual = {
         config: {dual: true},
 
+        names: Duality.values,
+
         dual: function() {
             return this._owner.nodes(this.duality().dual());
         },
         duality: function() {
             return this._owner.duality(this);
-        },
-        toJSON: function(json) {
-            return { 'hvert': json[0], 'hedge': json[1] }
-        },
-        fromJSON: function(json, map) {
-            if (json['hvert']) {
-                this['hvert'].fromJSON(json['hvert'], map);
-            }
-            if (json['hedge']) {
-                this['hedge'].fromJSON(json['hedge'], map);
-            }
         }
     };
 

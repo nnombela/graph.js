@@ -86,18 +86,18 @@ jasmine.clearInterval = jasmine.bindOriginal_(jasmine.getGlobal(), 'clearInterva
 
 jasmine.MessageResult = function(values) {
   this.type = 'log';
-  this.values = values;
+  this.members = values;
   this.trace = new Error(); // todo: test better
 };
 
 jasmine.MessageResult.prototype.toString = function() {
   var text = "";
-  for (var i = 0; i < this.values.length; i++) {
+  for (var i = 0; i < this.members.length; i++) {
     if (i > 0) text += " ";
-    if (jasmine.isString_(this.values[i])) {
-      text += this.values[i];
+    if (jasmine.isString_(this.members[i])) {
+      text += this.members[i];
     } else {
-      text += jasmine.pp(this.values[i]);
+      text += jasmine.pp(this.members[i]);
     }
   }
   return text;
