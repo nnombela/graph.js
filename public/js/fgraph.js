@@ -442,15 +442,6 @@
         },
         direction: function() {
             return this._owner.direction(this);
-        },
-        toJSON: function(json) {
-            return json['0'] && json['1']?  { 'in': json[0], 'out': json[1] } : json;  // rename
-        },
-        fromJSON: function(json, map) {
-            if (json['in'] && json['out']) {
-                this['0'].fromJSON(json['in'], map);
-                this['1'].fromJSON(json['out'], map);
-            }
         }
     };
 
@@ -496,6 +487,14 @@
         },
         direction: function(links) {
             return this._links[0] === links? Direction.in : this._links[1] === links? Direction.out : undefined;
+        },
+        toJSON: function(json) {
+            json.links = {'in': json.links['0'], 'out': json.links['1']};
+            return json
+        },
+        fromJSON: function(json, map) {
+            var jsonLinks = {'0': json.links['in'], '1': json.links['out']};
+            this.links().fromJSON(jsonLinks, map);
         },
         indexOf: function(links) {
             var direction = this.direction(links);
