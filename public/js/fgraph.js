@@ -59,7 +59,19 @@
             return GraphFactory.getFactory(this.config);
         },
         label: function() {
-            return this._label? this._label : this._createLabel();
+            return this._label? this._label : this.signature();
+        },
+        signature: function() {
+            if (this._owner) {
+                var ownerLabel = this._owner.label();
+                var prefix = ownerLabel.indexOf('#') != 0? '#' + ownerLabel + ':' : ownerLabel + ':';
+                var idx = this._owner.indexOf(this);
+                var sufix = idx != -1? '[' + idx + ']' : '';
+
+                return prefix + this.type().val() + sufix;
+            } else {
+                return '#' + this.type().val() + '(free)';
+            }
         },
         toString: function() {
             return this.label();
@@ -88,19 +100,13 @@
         }),
 
         fromJSON: OOP.Composable.create(function(json, map) {
-            if (json.label) {
+            if (json.label && json.label.indexOf('#') != 0) {
                 this._label = json.label;
             }
             map[this.label()] = this;
         }),
 
         // ---- Private methods
-        _createLabel: function() {
-            var prefix = this._owner? this._owner.label() + ':' : '';
-            var idx = this.index();
-            var sufix = idx != -1? '[' + idx + ']' : '';
-            return prefix + this.type().val() + sufix;
-        },
 
         _bind: function(thisProp, that, thatProp) { // "this" is implicit
             thatProp = thatProp || thisProp; // if not given thatProp will be thisProp, sometimes have same name sometimes have dual names
@@ -108,7 +114,7 @@
                 this[thisProp] = that;
                 that[thatProp] = this;
             } else if (this[thisProp] !== that || that[thatProp] !== this) { // it is already bound
-                throw new Error('Not able to bind objects ( ' + this + ', ' + that + ')')
+                throw new Error('Already bound graph objects ( ' + this + ', ' + that + ')')
             }
         },
         _unbind: function(thisProp, thatProp) {
@@ -117,6 +123,20 @@
             if (that !== null && that[thatProp] === this) {
                 that[thatProp] = null;
                 this[thisProp] = null;
+            }
+        },
+        _toJsonBind: function(json, name) {
+            var _name = '_' + name;
+            if (this[_name]) {
+                json[name] = this[_name].label();
+            }
+            return json;
+        },
+        _fromJsonBound: function(json, map, name) {
+            var bound = json[name];
+            if (bound && map[bound]) {
+                var _name = '_' + name;
+                this._bind(_name, map[bound]);
             }
         }
     });
@@ -324,15 +344,10 @@
             return this._pair;
         },
         toJSON: function(json) {
-            if (this._pair) {
-                json.pair = this._pair.label();
-            }
-            return json
+            return this._toJsonBind(json, 'pair');
         },
         fromJSON: function(json, map) {
-            if (json.pair && map[json.pair]) {
-                this.bind(map[json.pair]);
-            }
+            this._fromJsonBound(json, map, 'pair');
         }
     });
 
@@ -360,7 +375,7 @@
             if (this.belongsTo().reverse() === reverse.belongsTo()) {
                 this._bind('_reverse', reverse);
             } else {
-                throw new Error("Can not bind reverse")
+                throw new Error("This " + this + " can not be reverse bound with that " + reverse)
             }
         },
         unbindReverse: function() {
@@ -371,15 +386,10 @@
             return this._owner.direction();
         },
         toJSON: function(json) {
-            if (this._reverse) {
-                json.reverse = this._reverse.label();
-            }
-            return json
+            return this._toJsonBind(json, 'reverse');
         },
         fromJSON: function(json, map) {
-            if (json.reverse && map[json.reverse]) {
-                this.bindReverse(map[json.reverse]);
-            }
+            this._fromJsonBound(json, map, 'reverse');
         }
     };
 
@@ -411,21 +421,12 @@
             return this._down;
         },
         toJSON: function(json) {
-            if (this._inverse) {
-                json.inverse = this._inverse.label();
-            }
-            if (this._down) {
-                json.down = this._down.label();
-            }
-            return json
+            this._toJsonBind(json, 'inverse');
+            return this._toJsonBind(json, 'down');
         },
         fromJSON: function(json, map) {
-            if (json.inverse && map[json.inverse]) {
-                this.bindInverse(map[json.inverse]);
-            }
-            if (json.down && map[json.down]) {
-                this.bindDown(map[json.down]);
-            }
+            this._fromJsonBound(json, map, 'inverse');
+            this._fromJsonBound(json, map, 'down');
         }
     };
 
@@ -485,7 +486,7 @@
             return direction? this._links.container(direction) : this._links;
         },
         direction: function(links) {
-            return this._links[0] === links? Direction.in : this._links[1] === links? Direction.out : undefined;
+            return this._links[0] === links? Direction['in'] : this._links[1] === links? Direction['out'] : undefined;
         },
         indexOf: function(links) {
             var direction = this.direction(links);
@@ -510,6 +511,12 @@
         up: function() {
             return this._up;
         },
+        bindInverse: function(inverse) {
+            this._bind('_inverse', inverse);
+        },
+        unbindInverse: function() {
+            this._unbind('_inverse')
+        },
         bindDown: function(down) {
             this._bind('_down', down, '_up');
         },
@@ -523,24 +530,14 @@
             this._unbind('_up', '_down')
         },
         toJSON: function(json) {
-            if (this._up) {
-                json.up = this._up.label();
-            }
-            if (this._down) {
-                json.down = this._down.label();
-            }
-            return json;
+            this._toJsonBind(json, 'inverse');
+            this._toJsonBind(json, 'up');
+            return this._toJsonBind(json, 'down');
         },
         fromJSON: function(json, map) {
-            if (json.inverse && map[json.inverse]) {
-                this.bindInverse(map[json.inverse]);
-            }
-            if (json.down && map[json.down]) {
-                this.bindDown(map[json.down]);
-            }
-            if (json.up && map[json.up]) {
-                this.bindUp(map[json.up]);
-            }
+            this._fromJsonBound(json, map, 'inverse');
+            this._fromJsonBound(json, map, 'up');
+            this._fromJsonBound(json, map, 'down');
         }
     };
 
@@ -648,15 +645,10 @@
             this._unbind('_up', '_down')
         },
         toJSON: function(json) {
-            if (this._up) {
-                json.up = this._up.label();
-            }
-            return json;
+            return this._toJsonBind(json, 'up');
         },
         fromJSON: function(json, map) {
-            if (json.up && map[json.up]) {
-                this.bindUp(map[json.up]);
-            }
+            this._fromJsonBound(json, map, 'up');
         }
     };
 
