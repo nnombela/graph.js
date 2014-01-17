@@ -62,16 +62,14 @@
             return this._label? this._label : this.signature();
         },
         signature: function() {
+            var prefix = '#', suffix = '(free)';
             if (this._owner) {
                 var ownerLabel = this._owner.label();
-                var prefix = ownerLabel.indexOf('#') != 0? '#' + ownerLabel + ':' : ownerLabel + ':';
+                prefix = ownerLabel.indexOf('#') != 0? '#' + ownerLabel + ':' : ownerLabel + ':';
                 var idx = this._owner.indexOf(this);
-                var sufix = idx != -1? '[' + idx + ']' : '';
-
-                return prefix + this.type().val() + sufix;
-            } else {
-                return '#' + this.type().val() + '(free)';
+                suffix = idx != -1? '[' + idx + ']' : '';
             }
+            return prefix + this.type().val() + suffix;
         },
         toString: function() {
             return this.label();
