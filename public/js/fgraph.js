@@ -1,9 +1,9 @@
 //  graph.js 0.9
 //  (c) 2013 nnombela@gmail.com.
 //  Graph library
-(function() {
+(function(root) {
     // dependencies
-    var root = this, OOP = this.OOP, FP = this.FP;
+    var OOP = root.OOP, FP = root.FP;
 
     var Types = OOP.Enum.create(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
         children: function() {
@@ -919,7 +919,7 @@
     exports.G = GraphFactory;
 
 
-}).call(this);
+})(this);
 
 
 

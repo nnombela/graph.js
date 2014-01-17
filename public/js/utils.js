@@ -2,8 +2,7 @@
 //  (c) 2013 nnombela@gmail.com.
 //  A few FP and OOP utility functions and objects
 
-(function() {
-    var root = this;
+(function(root) {
     var SLICE = Array.prototype.slice;
 
     var Class = extend(function() {}, {
@@ -149,7 +148,7 @@
         });
     }
 
-}).call(this);
+})(this);
 
 
 
