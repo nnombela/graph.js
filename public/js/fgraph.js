@@ -621,20 +621,8 @@
         next: function() {
             return this._up.graph();
         },
-        root: function() {
-            var root = this;
-
-            while(!root.isRoot()) {
-                root = root.next();
-            }
-            return root;
-        },
-        // graphs: function() {}  use belongsTo() instead
-        isRoot: function() {
-            return this._up === null;
-        },
         ordinal: function() {
-            return this.isRoot()? 0: this.next().ordinal() + 1;
+            return this._owner.root() === this? 0: this.next().ordinal() + 1;
         },
         bindUp: function(up) {
             this._bind('_up', up, '_down');
@@ -659,11 +647,13 @@
     });
 
     var GraphsMultilevel = {
+        initialize: function() {
+            this._root = null;
+        },
         config: { multilevel: true },
 
         root: function() {
-
-
+            return this._root;
         }
     };
 
