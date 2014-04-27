@@ -217,8 +217,8 @@
             }
         },
         addNew: function(label) {
-            var gobj = this.factory().create(this.type().children(), label, this);
-            this._children.push(gobj);
+            var gobj = this.factory().create(this.type().children(), label, null);
+            this.add(gobj);
             return gobj;
         },
         remove: function(gobj) {
@@ -415,7 +415,7 @@
             this._unbind('_down', '_up')
         },
 
-        down: function() {
+        downNode: function() {
             return this._down;
         },
         toJSON: function(json) {
@@ -503,10 +503,10 @@
         inverse: function() {
             return this._inverse;
         },
-        down: function() {
+        downGraph: function() {
             return this._down;
         },
-        up: function() {
+        upLink: function() {
             return this._up;
         },
         bindInverse: function(inverse) {
@@ -614,15 +614,22 @@
 
         initialize: function() {
             this._up = null;
+            this._graphs = null
         },
-        up: function() {
+        upNode: function() {
             return this._up;
         },
-        next: function() {
-            return this._up.graph();
+        graphs: function() {  // Graphs own by this graph
+            return this._graphs;
         },
-        ordinal: function() {
-            return this._owner.root() === this? 0: this.next().ordinal() + 1;
+        next: function() {
+            return this._owner._owner;
+        },
+        isRoot: function() {
+            return this._up == null;
+        },
+        level: function() {
+            return this.isRoot()? 0: this.next().level() + 1;
         },
         bindUp: function(up) {
             this._bind('_up', up, '_down');
@@ -642,18 +649,28 @@
 
     var Graphs = GraphContainer.extend({
         type: function() {
-            return Types.graphs;
+            return Types['graphs'];
         }
     });
 
     var GraphsMultilevel = {
-        initialize: function() {
-            this._root = null;
+        initialize: function(owner) {
+            owner._graphs = this;
         },
         config: { multilevel: true },
 
-        root: function() {
-            return this._root;
+        add: function(graph) {
+            this._super("add", graph);
+            var node = this._owner.nodes().addNew();
+            graph.bindUp(node);   // the other bind should be done by this one
+            return graph;
+        },
+        remove: function(graph) {
+            var node = graph.upNode();
+            var result = this._super("remove", graph);
+            if (result) {
+                node.free();
+            }
         }
     };
 

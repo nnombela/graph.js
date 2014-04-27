@@ -107,7 +107,7 @@
             }
             var dstVal = dst[prop], srcVal = src[prop];
 
-            // if dstVal exist and has an createExtended function then use it to create the extended object
+            // if dstVal exist and has an extend() function then use it to create the extended object
             return dstVal && dstVal.extend? dstVal.extend(srcVal) : srcVal;
         });
     }

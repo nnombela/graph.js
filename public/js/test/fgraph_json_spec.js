@@ -117,3 +117,19 @@ describe("G default, dual=true", function() {
         expect(stringify).toEqual(stringify2);
     });
 });
+
+describe("G default, multilevel=true", function() {
+
+    var factory = G.getFactory({multilevel: true});
+
+    var top = factory.createGraph('top');
+
+    var graphs = factory.createGraphs('graphs', top);
+
+//
+//
+//    it("stringify - parse", function() {
+//        expect(stringify).toEqual(stringify2);
+//    });
+});
+
