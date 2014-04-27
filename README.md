@@ -16,5 +16,5 @@ Graph Library, JavaScript Implementation
 
 ##Three main aspects, each one for each entity:
 * **Direction**, Link aspect, splits collection of links into to classes: [**in**, **out**] links
-* **Duality**, Node aspect, splits collection of nodes into to classes: [**hvert**, **hedge**] (hyper-vertex, hyperedge) nodes
+* **Duality**, Node aspect, splits collection of nodes into to classes: [**hvert**, **hedge**] hyper-vertex and hyper-edge nodes
 * **Multilevel**, Graph aspect, organizes connected graphs into a multilevel hierarchical structure.
