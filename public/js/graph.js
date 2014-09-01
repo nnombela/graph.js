@@ -619,17 +619,15 @@
         upNode: function() {
             return this._up;
         },
-        graphs: function() {  // Graphs own by this graph
+        graphs: function() {  // Graphs owns by this graph
             return this._graphs;
         },
-        next: function() {
-            return this._owner._owner;
-        },
-        isRoot: function() {
-            return this._up == null;
+        next: function() { // _owner is a graphs, _owner._owner is a graph
+            return this._owner? this._owner._owner : null;
         },
         level: function() {
-            return this.isRoot()? 0: this.next().level() + 1;
+            var next = this.next();
+            return next? next.level() + 1 : 0;
         },
         bindUp: function(up) {
             this._bind('_up', up, '_down');
