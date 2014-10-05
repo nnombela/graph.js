@@ -23,7 +23,7 @@
         }
     });
 
-    var Composable = extend(function() {}, {
+    var Extendable = extend(function() {}, {
         extend: function(obj) {
             var instance; // create a new composed object using the prototype chain and composing the function
             if (this instanceof Function && obj instanceof Function) {
@@ -81,7 +81,7 @@
         OOP: {
             Class: Class,
             Enum: Enum,
-            Composable: Composable
+            Extendable: Extendable
         }
     });
 

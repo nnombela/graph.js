@@ -41,7 +41,9 @@
             this.initialize(owner);
         },
 
-        initialize: OOP.Composable.create(function(owner) {
+        config: OOP.Extendable.create({name: 'default'}),
+
+        initialize: OOP.Extendable.create(function(owner) {
             if (!owner || !this._owner) {
                 this._owner = owner;
             } else {
@@ -49,7 +51,12 @@
             }
         }),
 
-        config: OOP.Composable.create({name: 'default'}),
+        free: OOP.Extendable.create(function(owned) {
+            if (!owned && this._owner) {
+                this._owner.freeOwned(this);
+                this._owner = null;
+            }
+        }),
 
         type: function() {
             return this._owner.type().children();
@@ -62,14 +69,14 @@
             return this._label? this._label : this.signature();
         },
         signature: function() {
-            var prefix = '#', suffix = '(free)';
-            if (this._owner) {
-                var ownerLabel = this._owner.label();
-                prefix = ownerLabel.indexOf('#') != 0? '#' + ownerLabel + ':' : ownerLabel + ':';
-                var idx = this._owner.indexOf(this);
-                suffix = idx != -1? '[' + idx + ']' : '';
+            function prefix(ownerLabel) {
+                return ownerLabel.indexOf('#') != 0? '#' + ownerLabel + ':' : ownerLabel + ':';
             }
-            return prefix + this.type().val() + suffix;
+            function suffix(onwerIndex) {
+                return onwerIndex != -1? '[' + onwerIndex + ']' : '';
+            }
+            return this._owner? prefix(this._owner.label()) + this.type().val() + suffix(this._owner.indexOf(this)) :
+                '#' + this.type().val() + '(free)';
         },
         toString: function() {
             return this.label();
@@ -83,13 +90,10 @@
         belongsTo: function(type) {
             return type === undefined || this.type() === type? this._owner : this._owner.belongsTo(type);
         },
-        free: function() {
-            if (this._owner) this._owner.free(this);
-            return this;
-        },
+
 
         // ---- JSON
-        toJSON: OOP.Composable.create(function() {
+        toJSON: OOP.Extendable.create(function() {
             var json = Object.create(null);
             if (this._label) {
                 json.label = this._label;
@@ -97,7 +101,7 @@
             return json;
         }),
 
-        fromJSON: OOP.Composable.create(function(json, map) {
+        fromJSON: OOP.Extendable.create(function(json, map) {
             if (json.label && json.label.indexOf('#') != 0) {
                 this._label = json.label;
             }
@@ -112,7 +116,7 @@
                 this[thisProp] = that;
                 that[thatProp] = this;
             } else if (this[thisProp] !== that || that[thatProp] !== this) { // it is already bound
-                throw new Error('Already bound graph objects ( ' + this + ', ' + that + ')')
+                throw new Error('Objects are already bound ( ' + this + ', ' + that + ')')
             }
         },
         _unbind: function(thisProp, thatProp) {
@@ -188,6 +192,16 @@
             this._children = [];
         },
 
+        free: function(owned) {
+            if (owned) {
+                this.remove(owned);
+            } else {
+                this.forEach(function(child) {
+                    child.free();
+                })
+            }
+        },
+
         get: function(index) {
             return this._children[index];
         },
@@ -216,8 +230,11 @@
                 throw new Error('This graph object ' + gobj + ' could not be added to ' + this + ' graph container');
             }
         },
+        newChild: function(label) {
+            return this.factory().create(this.type().children(), label, null);
+        },
         addNew: function(label) {
-            var gobj = this.factory().create(this.type().children(), label, null);
+            var gobj = this.newChild(label);
             this.add(gobj);
             return gobj;
         },
@@ -229,9 +246,7 @@
             }
             return idx;
         },
-        free: function(gobj) {
-            return gobj? this.remove(gobj) : this._super("free");
-        },
+
         toJSON: function() {
             return this._children.map(function(elem) {
                 return elem.toJSON()
@@ -295,13 +310,12 @@
             var idx = this[0].remove(gobj);
             return idx !== -1? idx : this[1].remove(gobj);
         },
-        free: function(gobj) {
-            if (gobj) {
-                return this.remove(gobj);
+        free: function(owned) {
+            if (owned) {
+                return this.remove(owned);
             } else {
                 this[0].free();
                 this[1].free();
-                return this._super('free');
             }
         },
         toJSON: function() {
@@ -346,6 +360,9 @@
         },
         fromJSON: function(json, map) {
             this._fromJsonBound(json, map, 'pair');
+        },
+        free: function() {
+            this.unbind();
         }
     });
 
@@ -388,6 +405,9 @@
         },
         fromJSON: function(json, map) {
             this._fromJsonBound(json, map, 'reverse');
+        },
+        free: function() {
+            this.unbindReverse();
         }
     };
 
@@ -395,7 +415,7 @@
         config: { multilevel: true },
 
         initialize: function() {
-            this._down = null;
+            this._downNode = null;
             this._inverse = null;
         },
 
@@ -408,23 +428,28 @@
         unbindInverse: function() {
             this._unbind('_inverse')
         },
-        bindDown: function(down) {
-            this._bind('_down', down, '_up');
+        bindDownNode: function(downNode) {
+            this._bind('_downNode', downNode, '_upLink');
         },
-        unbindDown: function() {
-            this._unbind('_down', '_up')
+        unbindDownNode: function() {
+            this._unbind('_downNode', '_upLink')
         },
-
         downNode: function() {
-            return this._down;
+            return this._downNode;
         },
         toJSON: function(json) {
             this._toJsonBind(json, 'inverse');
-            return this._toJsonBind(json, 'down');
+            return this._toJsonBind(json, 'downNode');
         },
         fromJSON: function(json, map) {
             this._fromJsonBound(json, map, 'inverse');
-            this._fromJsonBound(json, map, 'down');
+            this._fromJsonBound(json, map, 'downNode');
+        },
+        free: function() {
+            this.unbindInverse();
+            var downNode = this.downNode();
+            this.unbindDownNode();
+            downNode.free();
         }
     };
 
@@ -448,6 +473,17 @@
 
         inverse: function(direction) {
             return this._owner.inverse().links(direction);
+        },
+
+        add: function(link, downNode) {
+            this._super("add", link);
+            if (downNode) {
+                link.bindDownNode(downNode);
+            } else {
+                var downNodes = this._owner.downGraph().nodes();
+                downNodes.add(downNodes.newChild(), link, undefined);
+            }
+            return link;
         }
     };
 
@@ -472,6 +508,10 @@
         },
         fromJSON: function(json, map) {
             this.links().fromJSON(json.links, map);
+        },
+        free: function() {
+            this.links().free();
+            return this._super('free');
         }
     });
 
@@ -497,17 +537,17 @@
 
         initialize: function() {
             this._inverse = null;
-            this._down = null;
-            this._up = null;
+            this._downGraph = null;
+            this._upLink = null;
         },
         inverse: function() {
             return this._inverse;
         },
         downGraph: function() {
-            return this._down;
+            return this._downGraph;
         },
         upLink: function() {
-            return this._up;
+            return this._upLink;
         },
         bindInverse: function(inverse) {
             this._bind('_inverse', inverse);
@@ -515,27 +555,36 @@
         unbindInverse: function() {
             this._unbind('_inverse')
         },
-        bindDown: function(down) {
-            this._bind('_down', down, '_up');
+        bindDownGraph: function(downGraph) {
+            this._bind('_downGraph', downGraph, '_upNode');
         },
-        unbindDown: function() {
-            this._unbind('_down', '_up')
+        unbindDownGraph: function() {
+            this._unbind('_downGraph', '_upNode')
         },
-        bindUp: function(up) {
-            this._bind('_up', up, '_down');
+        bindUpLink: function(upLink) {
+            this._bind('_upLink', upLink, '_downNode');
         },
-        unbindUp: function() {
-            this._unbind('_up', '_down')
+        unbindUpLink: function() {
+            this._unbind('_upLink', '_downNode')
         },
         toJSON: function(json) {
             this._toJsonBind(json, 'inverse');
-            this._toJsonBind(json, 'up');
-            return this._toJsonBind(json, 'down');
+            this._toJsonBind(json, 'upLink');
+            return this._toJsonBind(json, 'downGraph');
         },
         fromJSON: function(json, map) {
             this._fromJsonBound(json, map, 'inverse');
-            this._fromJsonBound(json, map, 'up');
-            this._fromJsonBound(json, map, 'down');
+            this._fromJsonBound(json, map, 'upLink');
+            this._fromJsonBound(json, map, 'downGraph');
+        },
+        free: function() {
+            this.unbindInverse();
+            var downGraph = this.downGraph();
+            var upLink = this.upLink();
+            this.unbindDownGraph();
+            this.unbindUpLink();
+            downGraph.free();
+            upLink.free();
         }
     };
 
@@ -565,6 +614,27 @@
 
     var NodesMultilevel = {
         config: { multilevel: true },
+
+        add: function(node, upLink, downGraph) {
+            this._super("add", node);
+
+            if (upLink) {
+                this.bindUpLink(upLink);
+            } else {
+                var upLinks = this._owner.upNode().links();
+                upLinks.add(upLinks.newChild(), node);
+            }
+
+            if (downGraph) {
+                this.bindDownGraph(downGraph);
+            } else {
+                var downGraphs = this._owner.graphs();
+                downGraphs.add(downGraphs.newChild(), node);
+            }
+
+            return node;
+        },
+
 
         up: function(duality) {
             return this._owner.up().nodes(duality);
@@ -613,11 +683,11 @@
         config: { multilevel: true },
 
         initialize: function() {
-            this._up = null;
+            this._upNode = null;
             this._graphs = null
         },
         upNode: function() {
-            return this._up;
+            return this._upNode;
         },
         graphs: function() {  // Graphs own by this graph
             return this._graphs;
@@ -625,23 +695,25 @@
         next: function() {
             return this._owner._owner;
         },
-        isRoot: function() {
-            return this._up == null;
-        },
         level: function() {
-            return this.isRoot()? 0: this.next().level() + 1;
+            return this.next()? this.next().level() + 1 : 0;
         },
-        bindUp: function(up) {
-            this._bind('_up', up, '_down');
+        bindUpNode: function(upNode) {
+            this._bind('_upNode', upNode, '_downGraph');
         },
-        unbindUp: function() {
-            this._unbind('_up', '_down')
+        unbindUpNode: function() {
+            this._unbind('_upNode', '_downGraph')
         },
         toJSON: function(json) {
-            return this._toJsonBind(json, 'up');
+            return this._toJsonBind(json, 'upNode');
         },
         fromJSON: function(json, map) {
-            this._fromJsonBound(json, map, 'up');
+            this._fromJsonBound(json, map, 'upNode');
+        },
+        free: function() {
+            var upNode = this.upNode();
+            this.unbindUpNode();
+            upNode.free();
         }
     };
 
@@ -659,18 +731,16 @@
         },
         config: { multilevel: true },
 
-        add: function(graph) {
+        add: function(graph, upNode) {
             this._super("add", graph);
-            var node = this._owner.nodes().addNew();
-            graph.bindUp(node);   // the other bind should be done by this one
-            return graph;
-        },
-        remove: function(graph) {
-            var node = graph.upNode();
-            var result = this._super("remove", graph);
-            if (result) {
-                node.free();
+
+            if (upNode) {
+                this.bindUpNode(upNode);
+            } else {
+                var upNodes = this._owner.nodes();
+                upNodes.add(upNodes.newChild(), undefined, graph);
             }
+            return graph;
         }
     };
 
