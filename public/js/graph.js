@@ -44,17 +44,18 @@
         config: OOP.Extendable.create({name: 'default'}),
 
         initialize: OOP.Extendable.create(function(owner) {
-            if (!owner || !this._owner) {
+            if (!this._owner) {
                 this._owner = owner;
             } else {
-                throw new Error(this + ' can not properly be initialized with ' + owner);
+                throw new Error(this + ' is already initialized');
             }
         }),
 
-        free: OOP.Extendable.create(function(owned) {
-            if (!owned && this._owner) {
-                this._owner.freeOwned(this);
+        free: OOP.Extendable.create(function() {
+            if (this._owner) {
+                var owner = this._owner;
                 this._owner = null;
+                owner.free(this);
             }
         }),
 
@@ -69,14 +70,15 @@
             return this._label? this._label : this.signature();
         },
         signature: function() {
-            function prefix(ownerLabel) {
-                return ownerLabel.indexOf('#') != 0? '#' + ownerLabel + ':' : ownerLabel + ':';
+            function prefix(owner) {
+                var label = owner? owner.label() : undefined;
+                return label? label.indexOf('#') != 0? '#' + label + ':' : label + ':' : '#';
             }
-            function suffix(onwerIndex) {
-                return onwerIndex != -1? '[' + onwerIndex + ']' : '';
+            function suffix(owner, owned) {
+                var index = owner? owner.indexOf(owned) : -1;
+                return index != -1? '[' + index + ']' : '';
             }
-            return this._owner? prefix(this._owner.label()) + this.type().val() + suffix(this._owner.indexOf(this)) :
-                '#' + this.type().val() + '(free)';
+            return prefix(this._owner) + this.type().val() + suffix(this._owner, this);
         },
         toString: function() {
             return this.label();
@@ -197,7 +199,7 @@
                 this.remove(owned);
             } else {
                 this.forEach(function(child) {
-                    child.free();
+                    this.remove(child);
                 })
             }
         },
@@ -242,7 +244,7 @@
             var idx = this.indexOf(gobj);
             if (idx !== -1) {
                 this._children.splice(idx, 1);
-                gobj.initialize(null)
+                gobj.free();
             }
             return idx;
         },
