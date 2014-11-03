@@ -88,7 +88,9 @@
     //----------------------------------   Functions
 
     function extend(dst, src, exec) {
-        exec = exec || function(prop) { return src[prop] };
+        exec = exec || function(prop) {
+          return src.hasOwnProperty(prop)? src[prop] : undefined;
+        };
 
         for (var prop in src) {
             var value = exec(prop, dst, src);
@@ -142,10 +144,8 @@
         return Child;
     }
 
-    function mixin(constructor, props) {
-        return extend(constructor.prototype, props, function(prop) {
-            return props.hasOwnProperty(prop)? src[prop] : undefined;
-        });
+    function mixin(dst, props) {
+        return extend(dst.prototype, props);
     }
 
 })(this);
