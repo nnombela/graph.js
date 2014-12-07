@@ -3,7 +3,7 @@
 //  A few FP and OOP utility functions and objects
 
 (function(root) {
-    var SLICE = Array.prototype.slice;
+    var slice = Array.prototype.slice;
 
     var Class = extend(function() {}, {
         augment: function(props) {  // This is also called mixin
@@ -133,7 +133,7 @@
             constructor: { value: Child, enumerable: false },
             _super: { value: function(name) {
                 var val = Parent.prototype[name];
-                return val && val.apply? val.apply(this, SLICE.call(arguments, 1)) : val;
+                return val && typeof val.apply === 'function'? val.apply(this, slice.call(arguments, 1)) : val;
             }, enumerable: false}
         });
 
