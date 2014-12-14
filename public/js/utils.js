@@ -7,7 +7,7 @@
 
     var Class = extend(function() {}, {
         mixin: function(props) {  // This is also called mixin
-            return rExtend(this.prototype, props);
+            return rMixin(this, props);
         },
         extend: function(props) {
             if (!props || props instanceof Function) {
