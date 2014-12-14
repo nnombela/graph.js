@@ -95,7 +95,7 @@
     //----------------------------------   Functions
 
     function isFunction(obj) {
-        return typeof obj === 'function' || false;
+        return typeof obj === 'function';
     }
 
     function extend(dst, src, exec) {
