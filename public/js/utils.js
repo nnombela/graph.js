@@ -7,8 +7,7 @@
 
     var Class = extend(function() {}, {
         mixin: function(props) {  // This is also called mixin
-            rExtend(this.prototype, props);
-            return this;
+            return rExtend(this.prototype, props);
         },
         extend: function(props) {
             if (!props || props instanceof Function) {
@@ -117,7 +116,7 @@
     // recursive extend
     function rExtend(dst, src) {
         return extend(dst, src, function(prop) {
-            if (src.hasOwnProperty(prop) && prop !== 'constructor') {
+            if (src.hasOwnProperty(prop) && prop !== 'constructor') {   // don't mess constructor property
                 var dstVal = dst[prop], srcVal = src[prop];
                 // if dstVal exist and has an extend() function then use it to create the extended object
                 return dstVal && isFunction(dstVal.extend)? dstVal.extend(srcVal) : srcVal;
