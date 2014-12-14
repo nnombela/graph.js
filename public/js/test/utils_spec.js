@@ -82,7 +82,7 @@ describe("Point - Circle", function() {
     };
 
     var Circle = Point.extend( {
-        augments: [Color],
+        mixins: [Color],
 
         statics: {
             createNew: function(x, y, radius) {

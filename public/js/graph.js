@@ -113,21 +113,26 @@
         // ---- Private methods
 
         _bind: function(thisProp, that, thatProp) { // "this" is implicit
-            thatProp = thatProp || thisProp; // if not given thatProp will be thisProp, sometimes have same name sometimes have dual names
+            thatProp = thatProp || thisProp; // if not given thatProp will be thisProp
             if (this[thisProp] === null && that[thatProp] === null) {
                 this[thisProp] = that;
                 that[thatProp] = this;
-            } else if (this[thisProp] !== that || that[thatProp] !== this) { // it is already bound
-                throw new Error('Objects are already bound ( ' + this + ', ' + that + ')')
+
+            } else if (this[thisProp] !== that) { // it is already bound
+                throw new Error(this + ' object is already bound to ' + this[thisProp]);
+            } else if (that[thatProp] !== this) { // it is already bound
+                throw new Error(that + ' object is already bound to ' + that[thatProp]);
             }
         },
         _unbind: function(thisProp, thatProp) {
             thatProp = thatProp || thisProp; // if not given thatProp will be thisProp
             var that = this[thisProp];
-            if (that !== null && that[thatProp] === this) {
-                that[thatProp] = null;
-                this[thisProp] = null;
+
+            if (that == null || that[thatProp] !== this || this[thisProp] !== that) {
+                throw new Error(thisProp + ' property and ' + thatProp + ' are not bound to each other');
             }
+            that[thatProp] = null;
+            this[thisProp] = null;
         },
         _toJsonBind: function(json, name) {
             var _name = '_' + name;
@@ -138,6 +143,7 @@
         },
         _fromJsonBound: function(json, map, name) {
             var bound = json[name];
+
             if (bound && map[bound]) {
                 var _name = '_' + name;
                 this._bind(_name, map[bound]);
@@ -188,7 +194,7 @@
     };
 
     var GraphContainer = GraphObject.extend({
-        augments: [Iterability, Accessibility],
+        mixins: [Iterability, Accessibility],
 
         initialize: function() {
             this._children = [];
@@ -264,7 +270,7 @@
 
 
     var DuoGraphContainer = GraphObject.extend({
-        augments: [Iterability, Accessibility],
+        mixins: [Iterability, Accessibility],
 
         Container: GraphContainer,
 
@@ -368,7 +374,7 @@
         }
     });
 
-// ----- Link augments
+// ----- Link mixins
 
     var LinkDirected = {
         config: {directed: true},
@@ -455,7 +461,7 @@
         }
     };
 
-// -------------- Links augments
+// -------------- Links mixins
 
     var LinksDirected = {
         config: {directed: true},
@@ -517,7 +523,7 @@
         }
     });
 
-// ----------- Node augments
+// ----------- Node mixins
 
     var NodeDirected = {
         config: {directed: true},
@@ -599,7 +605,7 @@
     };
 
 
-// ---------------- Nodes augments
+// ---------------- Nodes mixins
 
     var NodesDual = {
         config: {dual: true},
@@ -664,7 +670,7 @@
         }
     });
 
-// --------------- Graph augments
+// --------------- Graph mixins
 
     var GraphDual = {
         config: {dual: true},
@@ -834,172 +840,172 @@
 
     GraphFactory.register({name: 'default', directed: true}, {
         Link: Link.extend({
-            augments: [LinkDirected]
+            mixins: [LinkDirected]
         }),
         Links: DuoGraphContainer.extend({
-            augments: [LinksDirected],
+            mixins: [LinksDirected],
             Container: {  // Existing Container has an extend() method so It is composable
-                augments: [LinksDirected]
+                mixins: [LinksDirected]
             }
         }),
         Node: Node.extend({
-            augments: [NodeDirected]
+            mixins: [NodeDirected]
         }),
         Nodes: GraphContainer.extend({
-            augments: [Directed]
+            mixins: [Directed]
         }),
         Graph: Graph.extend({
-            augments: [Directed]
+            mixins: [Directed]
         }),
         Graphs: Graphs.extend({
-            augments: [Directed]
+            mixins: [Directed]
         })
     });
 
     GraphFactory.register({name: 'default', dual: true}, {
         Link: Link.extend({
-            augments: [Dual]
+            mixins: [Dual]
         }),
         Links: GraphContainer.extend({
-            augments: [Dual]
+            mixins: [Dual]
         }),
         Node: Node.extend({
-            augments: [NodeDual]
+            mixins: [NodeDual]
         }),
         Nodes: DuoGraphContainer.extend({
-            augments: [NodesDual],
+            mixins: [NodesDual],
             Container: {
-                augments: [NodesDual]
+                mixins: [NodesDual]
             }
         }),
         Graph: Graph.extend({
-            augments: [GraphDual]
+            mixins: [GraphDual]
         }),
         Graphs: Graphs.extend({
-            augments: [Dual]
+            mixins: [Dual]
         })
     });
 
     GraphFactory.register({name: 'default', multilevel: true}, {
         Link: Link.extend({
-            augments: [LinkMultilevel]
+            mixins: [LinkMultilevel]
         }),
         Links: GraphContainer.extend({
-            augments: [LinksMultilevel]
+            mixins: [LinksMultilevel]
         }),
         Node: Node.extend({
-            augments: [NodeMultilevel]
+            mixins: [NodeMultilevel]
         }),
         Nodes: GraphContainer.extend({
-            augments: [NodesMultilevel]
+            mixins: [NodesMultilevel]
         }),
         Graph: Graph.extend({
-            augments: [GraphMultilevel]
+            mixins: [GraphMultilevel]
         }),
         Graphs: Graphs.extend({
-            augments: [GraphsMultilevel]
+            mixins: [GraphsMultilevel]
         })
     });
 
     GraphFactory.register({name: 'default', directed: true, dual: true}, {
         Link: Link.extend({
-            augments: [LinkDirected, Dual]
+            mixins: [LinkDirected, Dual]
         }),
         Links: DuoGraphContainer.extend({
-            augments: [LinksDirected, Dual],
+            mixins: [LinksDirected, Dual],
             Container: {
-                augments: [LinksDirected, Dual]
+                mixins: [LinksDirected, Dual]
             }
         }),
         Node: Node.extend({
-            augments: [NodeDirected, NodeDual]
+            mixins: [NodeDirected, NodeDual]
         }),
         Nodes: DuoGraphContainer.extend({
-            augments: [Directed, NodesDual],
+            mixins: [Directed, NodesDual],
             Container: {
-                augments: [Directed, NodesDual]
+                mixins: [Directed, NodesDual]
             }
         }),
         Graph: Graph.extend({
-            augments: [Directed, GraphDual]
+            mixins: [Directed, GraphDual]
         }),
         Graphs: Graphs.extend({
-            augments: [Directed, Dual]
+            mixins: [Directed, Dual]
         })
     });
 
     GraphFactory.register({name: 'default', directed: true, multilevel: true}, {
         Link: Link.extend({
-            augments: [LinkDirected, LinkMultilevel]
+            mixins: [LinkDirected, LinkMultilevel]
         }),
         Links: DuoGraphContainer.extend({
-            augments: [LinksDirected, LinksMultilevel],
+            mixins: [LinksDirected, LinksMultilevel],
             Container: {
-                augments: [LinksDirected, LinksMultilevel]
+                mixins: [LinksDirected, LinksMultilevel]
             }
         }),
         Node: Node.extend({
-            augments: [NodeDirected, NodeMultilevel]
+            mixins: [NodeDirected, NodeMultilevel]
         }),
         Nodes: GraphContainer.extend({
-            augments: [Directed, NodesMultilevel]
+            mixins: [Directed, NodesMultilevel]
         }),
         Graph: Graph.extend({
-            augments: [Directed, GraphMultilevel]
+            mixins: [Directed, GraphMultilevel]
         }),
         Graphs: Graphs.extend({
-            augments: [Directed, GraphsMultilevel]
+            mixins: [Directed, GraphsMultilevel]
         })
     });
 
     GraphFactory.register({name: 'default', dual: true, multilevel: true}, {
         Link: Link.extend({
-            augments: [Dual, LinkMultilevel]
+            mixins: [Dual, LinkMultilevel]
         }),
         Links: GraphContainer.extend({
-            augments: [Dual, LinksMultilevel]
+            mixins: [Dual, LinksMultilevel]
         }),
         Node: Node.extend({
-            augments: [NodeDual, NodeMultilevel]
+            mixins: [NodeDual, NodeMultilevel]
         }),
         Nodes: DuoGraphContainer.extend({
-            augments: [NodesDual, NodesMultilevel],
+            mixins: [NodesDual, NodesMultilevel],
             Container: {
-                augments: [NodesDual, NodesMultilevel]
+                mixins: [NodesDual, NodesMultilevel]
             }
         }),
         Graph: Graph.extend({
-            augments: [GraphDual, GraphMultilevel]
+            mixins: [GraphDual, GraphMultilevel]
         }),
         Graphs: Graphs.extend({
-            augments: [Dual, GraphsMultilevel]
+            mixins: [Dual, GraphsMultilevel]
         })
     });
 
     GraphFactory.register({name: 'default', directed: true, dual: true, multilevel: true}, {
         Link: Link.extend({
-            augments: [LinkDirected, Dual, LinkMultilevel]
+            mixins: [LinkDirected, Dual, LinkMultilevel]
         }),
         Links: DuoGraphContainer.extend({
-            augments: [LinksDirected, Dual, LinksMultilevel],
+            mixins: [LinksDirected, Dual, LinksMultilevel],
             Container: {
-                augments: [LinksDirected, Dual, LinksMultilevel]
+                mixins: [LinksDirected, Dual, LinksMultilevel]
             }
         }),
         Node: Node.extend({
-            augments: [NodeDirected, NodeDual, NodeMultilevel]
+            mixins: [NodeDirected, NodeDual, NodeMultilevel]
         }),
         Nodes: DuoGraphContainer.extend({
-            augments: [Directed, NodesDual, NodesMultilevel],
+            mixins: [Directed, NodesDual, NodesMultilevel],
             Container: {
-                augments: [Directed, NodesDual, NodesMultilevel]
+                mixins: [Directed, NodesDual, NodesMultilevel]
             }
         }),
         Graph: Graph.extend({
-            augments: [Directed, GraphDual, GraphMultilevel]
+            mixins: [Directed, GraphDual, GraphMultilevel]
         }),
         Graphs: Graphs.extend({
-            augments: [Directed, Dual, GraphsMultilevel]
+            mixins: [Directed, Dual, GraphsMultilevel]
         })
     });
 

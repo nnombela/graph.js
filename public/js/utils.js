@@ -6,8 +6,8 @@
     var slice = Array.prototype.slice;
 
     var Class = extend(function() {}, {
-        augment: function(props) {  // This is also called mixin
-            recursiveExtend(this.prototype, props);
+        mixin: function(props) {  // This is also called mixin
+            rExtend(this.prototype, props);
             return this;
         },
         extend: function(props) {
@@ -15,24 +15,30 @@
                 return inherits(this, props);
             }
 
-            var Child = props.hasOwnProperty('constructor')? inherits(this, props.constructor) : inherits(this);
-            if (props.statics) recursiveExtend(Child, props.statics);
-            if (props.augments) props.augments.forEach(function(props) { Child.augment(props) });
+            var Child = props.hasOwnProperty('constructor')?
+              inherits(this, props.constructor) : inherits(this);
 
-            return Child.augment(props);
+            if (props.statics) {
+                rExtend(Child, props.statics);
+            }
+
+            if (props.mixins) {
+                props.mixins.forEach(function(props) {
+                    Child.mixin(props)
+                });
+            }
+
+            return Child.mixin(props);
         }
     });
 
     var Extendable = extend(function() {}, {
         extend: function(obj) {
-            var instance; // create a new composed object using the prototype chain and composing the function
-            if (this instanceof Function && obj instanceof Function) {
-                instance = compose(this, obj);
-                instance.__proto__ = this;  // Unfortunately there is no Function.create(this), why?
-            } else {
-                instance = Object.create(this);
-            }
-            return recursiveExtend(instance, obj);
+            // in case both are functions then compose them with this as proto
+            var instance = isFunction(this) && isFunction(obj)?
+              compose(this, obj, this) : Object.create(this);
+
+            return rExtend(instance, obj);
         },
         create: function(obj) {
             return extend(obj, this);
@@ -74,9 +80,11 @@
     return extend(exports, {
         FP: {
             extend: extend,
+            rExtend: rExtend,
             inherits: inherits,
             compose: compose,
-            mixin: mixin
+            mixin: mixin,
+            rMixin: rMixin
         },
         OOP: {
             Class: Class,
@@ -86,6 +94,10 @@
     });
 
     //----------------------------------   Functions
+
+    function isFunction(obj) {
+        return typeof obj === 'function' || false;
+    }
 
     function extend(dst, src, exec) {
         exec = exec || function(prop) {
@@ -102,24 +114,26 @@
         return dst;
     }
 
-    function recursiveExtend(dst, src) {
+    // recursive extend
+    function rExtend(dst, src) {
         return extend(dst, src, function(prop) {
-            if (prop === 'constructor') {  // don't want to mess with the constructor property
-                return undefined;
+            if (src.hasOwnProperty(prop) && prop !== 'constructor') {
+                var dstVal = dst[prop], srcVal = src[prop];
+                // if dstVal exist and has an extend() function then use it to create the extended object
+                return dstVal && isFunction(dstVal.extend)? dstVal.extend(srcVal) : srcVal;
             }
-            var dstVal = dst[prop], srcVal = src[prop];
-
-            // if dstVal exist and has an extend() function then use it to create the extended object
-            return dstVal && dstVal.extend? dstVal.extend(srcVal) : srcVal;
+            return undefined;
         });
     }
 
-    function compose(func1, func2) {
-        return function() {
+    function compose(func1, func2, proto) {
+        var result = function() {
             var f1 = func1.apply(this, arguments);
             var args = f1 === undefined? arguments : [f1];
             return func2.apply(this, args);
         };
+        result.__proto__ = proto || Function.prototype;
+        return result;
     }
 
     function inherits(Parent, Constructor) {
@@ -132,11 +146,17 @@
         extend(Child, Parent);
 
         Child.prototype = Object.create(Parent.prototype, {
-            constructor: { value: Child, enumerable: false },
-            _super: { value: function(name) {
-                var val = Parent.prototype[name];
-                return val && typeof val.apply === 'function'? val.apply(this, slice.call(arguments, 1)) : val;
-            }, enumerable: false}
+            constructor: {
+                value: Child,
+                enumerable: false
+            },
+            _super: {
+                value: function(name) {
+                    var val = Parent.prototype[name];
+                    return val && isFunction(val.apply)? val.apply(this, slice.call(arguments, 1)) : val;
+                },
+                enumerable: false
+            }
         });
 
         Child.parent = Parent;
@@ -145,7 +165,14 @@
     }
 
     function mixin(dst, props) {
-        return extend(dst.prototype, props);
+        extend(dst.prototype, props);
+        return dst;
+    }
+
+    // recursive mixin
+    function rMixin(dst, props) {
+        rExtend(dst.prototype, props);
+        return dst;
     }
 
 })(this);
