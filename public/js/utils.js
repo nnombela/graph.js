@@ -6,26 +6,24 @@
     var slice = Array.prototype.slice;
 
     var Class = extend(function() {}, {
-        mixin: function(props) {  // This is also called mixin
+        mixin: function(props) {
             return rMixin(this, props);
         },
         extend: function(props) {
-            if (!props || props instanceof Function) {
-                return inherits(this, props);
+            if (!props) {
+                return inherits(this);
             }
 
-            var Child = props.hasOwnProperty('constructor')?
-              inherits(this, props.constructor) : inherits(this);
+            var Constructor = isFunction(props)? props :
+                props.hasOwnProperty('constructor')? props.constructor :  this;
 
-            if (props.statics) {
-                rExtend(Child, props.statics);
-            }
+            var Child = inherits(this, Constructor);
 
-            if (props.mixins) {
-                props.mixins.forEach(function(props) {
-                    Child.mixin(props)
-                });
-            }
+            extend(Child, props.statics || {});
+
+            (props.mixins || []).forEach(function(props) {
+                Child.mixin(props)
+            });
 
             return Child.mixin(props);
         }
@@ -92,19 +90,23 @@
         }
     });
 
-    //----------------------------------   Functions
+    //----------   Functions
 
     function isFunction(obj) {
         return typeof obj === 'function';
     }
 
+    function ownProperty(obj, prop) {
+        return obj.hasOwnProperty(prop)? obj[prop] : undefined;
+    }
+
     function extend(dst, src, exec) {
         exec = exec || function(prop) {
-          return src.hasOwnProperty(prop)? src[prop] : undefined;
+          return ownProperty(src, prop)
         };
 
         for (var prop in src) {
-            var value = exec(prop, dst, src);
+            var value = exec(prop);
 
             if (value !== undefined) {
                 dst[prop] = value;
@@ -116,22 +118,25 @@
     // recursive extend
     function rExtend(dst, src) {
         return extend(dst, src, function(prop) {
-            if (src.hasOwnProperty(prop) && prop !== 'constructor') {   // don't mess constructor property
-                var dstVal = dst[prop], srcVal = src[prop];
-                // if dstVal exist and has an extend() function then use it to create the extended object
-                return dstVal && isFunction(dstVal.extend)? dstVal.extend(srcVal) : srcVal;
+            if (prop === 'constructor') {
+                return undefined;  // don't mess with constructor property
             }
-            return undefined;
+
+            var dstVal = dst[prop];
+            var srcVal = ownProperty(src, prop);
+
+            return  dstVal && isFunction(dstVal.extend) && srcVal? dstVal.extend(srcVal) : srcVal;
         });
     }
 
     function compose(func1, func2, proto) {
         var result = function() {
-            var f1 = func1.apply(this, arguments);
-            var args = f1 === undefined? arguments : [f1];
+            var result1 = func1.apply(this, arguments);
+            // if func1 returns undefined then use same arguments
+            var args = result1 === undefined? arguments : [result1];
             return func2.apply(this, args);
         };
-        result.__proto__ = proto || Function.prototype;
+        result.__proto__ = proto || Function.prototype;  // yes functions are also objects and have a prototype
         return result;
     }
 
