@@ -7,17 +7,17 @@ describe("Parent - Child", function() {
             log.push("Parent constructor");
             this.initialize();
         },
-        initialize: OOP.Extendable.create(function() {
+        initialize: OOP.Mergeable.create(function() {
             log.push("Parent initialize");
         }),
-        config: OOP.Extendable.create({ a: 'a' })
+        config: OOP.Mergeable.create({ a: 'a' })
     });
 
 
     var Child = Parent.extend({
         constructor: function() {
             log.push("Child constructor");
-            this._super('constructor');
+            this.super('constructor');
         },
 
         initialize: function() {
@@ -90,11 +90,11 @@ describe("Point - Circle", function() {
             }
         },
         constructor: function(x, y, radius) {
-            this._super('constructor', x, y);
+            this.super('constructor', x, y);
             this.radius = radius;
         },
         toString: function(str) {
-            return this._super('toString') + ':' + this.radius + ', ' + this.color.val();
+            return this.super('toString') + ':' + this.radius + ', ' + this.color.val();
         }
     });
 
@@ -107,7 +107,7 @@ describe("Point - Circle", function() {
 
         expect(point.toString()).toBe("(10, 10)");
 
-    })
+    });
 
     it("Circle", function() {
         var circle = Circle.createNew(20, 20, 30);

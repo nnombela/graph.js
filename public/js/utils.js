@@ -3,8 +3,6 @@
 //  A few FP and OOP utility functions and objects
 
 (function(root) {
-    var slice = Array.prototype.slice;
-
     var Class = extend(function() {}, {
         mixin: function(props) {
             return rMixin(this, props);
@@ -29,7 +27,7 @@
         }
     });
 
-    var Extendable = extend(function() {}, {
+    var Mergeable = extend(function() {}, {
         extend: function(obj) {
             // in case both are functions then compose them with this as proto
             var instance = isFunction(this) && isFunction(obj)?
@@ -86,55 +84,50 @@
         OOP: {
             Class: Class,
             Enum: Enum,
-            Extendable: Extendable
+            Mergeable: Mergeable
         }
     });
 
     //----------   Functions
 
+    function isArray(o) {
+        return Object.prototype.toString.call(o) === '[object Array]';
+    }
+
     function isFunction(obj) {
         return typeof obj === 'function';
     }
 
-    function ownProperty(obj, prop) {
-        return obj.hasOwnProperty(prop)? obj[prop] : undefined;
-    }
-
-    function extend(dst, src, exec) {
-        exec = exec || function(prop) {
-          return ownProperty(src, prop)
-        };
-
+    function extend(dst, src) {
         for (var prop in src) {
-            var value = exec(prop);
-
-            if (value !== undefined) {
-                dst[prop] = value;
+            if (Object.prototype.hasOwnProperty.call(src, prop)) {
+                dst[prop] = src[prop]
             }
         }
         return dst;
     }
 
-    // recursive extend
     function rExtend(dst, src) {
-        return extend(dst, src, function(prop) {
-            if (prop === 'constructor') {
-                return undefined;  // don't mess with constructor property
+        function getRecursivePropertyValue(dstVal, srcVal) {
+            return dstVal && isFunction(dstVal.extend) ?  dstVal.extend(srcVal) : srcVal
+        }
+
+        for (var prop in src) {
+            if (Object.prototype.hasOwnProperty.call(src, prop)) {
+                dst[prop] = getRecursivePropertyValue(dst[prop], src[prop])
             }
-
-            var dstVal = dst[prop];
-            var srcVal = ownProperty(src, prop);
-
-            return  dstVal && isFunction(dstVal.extend) && srcVal? dstVal.extend(srcVal) : srcVal;
-        });
+        }
+        return dst;
     }
 
+
     function compose(func1, func2, proto) {
+        function lift(result) {
+            return result === undefined || isArray(result) ? result : [result];
+        }
         var result = function() {
-            var result1 = func1.apply(this, arguments);
-            // if func1 returns undefined then use same arguments
-            var args = result1 === undefined? arguments : [result1];
-            return func2.apply(this, args);
+            var result = func1.apply(this, arguments);
+            return func2.apply(this, lift(result) || arguments); // if func1 returns undefined then use same arguments
         };
         result.__proto__ = proto || Function.prototype;  // yes functions are also objects and have a prototype
         return result;
@@ -154,10 +147,10 @@
                 value: Child,
                 enumerable: false
             },
-            _super: {
+            super: {
                 value: function(name) {
                     var val = Parent.prototype[name];
-                    return val && isFunction(val.apply)? val.apply(this, slice.call(arguments, 1)) : val;
+                    return val && isFunction(val.apply)? val.apply(this, Array.prototype.slice.call(arguments, 1)) : val;
                 },
                 enumerable: false
             }
@@ -168,14 +161,22 @@
         return Child;
     }
 
+    function checkConstructorProperty(props) {  // constructor property should not be mixin
+        if (props.propertyIsEnumerable('constructor')) {
+            Object.defineProperty(props, 'constructor', { value : props.constructor, enumerable: false });
+        }
+
+        return props
+    }
+
     function mixin(dst, props) {
-        extend(dst.prototype, props);
+        extend(dst.prototype, checkConstructorProperty(props));
         return dst;
     }
 
     // recursive mixin
     function rMixin(dst, props) {
-        rExtend(dst.prototype, props);
+        rExtend(dst.prototype, checkConstructorProperty(props));
         return dst;
     }
 

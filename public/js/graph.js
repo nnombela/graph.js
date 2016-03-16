@@ -5,30 +5,29 @@
     // dependencies
     var OOP = root.OOP, FP = root.FP;
 
-    var Types = OOP.Enum.create(['graphs', 'graph', 'nodes', 'node', 'links', 'link'], {
+    // Enums
+    var Types = OOP.Enum.create(['Graphs', 'Graph', 'Nodes', 'Node', 'Links', 'Link'], {
         children: function() {
             return Types.members[this.idx() + 1];
         },
         parent: function() {
             return Types.members[this.idx() - 1];
-        },
-        capitalize: function() {
-            return this.val().charAt(0).toUpperCase() + this.val().slice(1);
         }
     });
 
-    var Direction = OOP.Enum.create(['in', 'out'], {
+    var Direction = OOP.Enum.create(['I-Link', 'O-Link'], {
         reverse: function() {
-            return this === Direction['in']? Direction['out'] :  Direction['in'];
+            return Direction.members[(this.idx() + 1) % 2];
         }
     });
 
-    var Duality =  OOP.Enum.create(['hvert', 'hedge'], {
+    var Duality =  OOP.Enum.create(['V-Node', 'E-Node'], {
         dual: function() {
-            return this === Duality['hvert']? Duality['hedge'] : Duality['hvert'];
+            return Duality.members[(this.idx() + 1) % 2];
         }
     });
 
+    // Graph objects
     var GraphObject = OOP.Class.extend({
         statics: {
             Types: Types
@@ -41,17 +40,16 @@
             this.initialize(owner);
         },
 
-        config: OOP.Extendable.create({name: 'default'}),
+        config: OOP.Mergeable.create({name: 'default'}),
 
-        initialize: OOP.Extendable.create(function(owner) {
-            if (!this._owner) {
-                this._owner = owner;
-            } else {
-                throw new Error(this + ' is already initialized');
+        initialize: OOP.Mergeable.create(function(owner) {
+            if (this._owner) {
+                throw new Error(this + ' is already initialized with ' + this._owner);
             }
+            this._owner = owner;
         }),
 
-        free: OOP.Extendable.create(function() {
+        free: OOP.Mergeable.create(function() {
             if (this._owner) {
                 var owner = this._owner;
                 this._owner = null;
@@ -62,7 +60,6 @@
         type: function() {
             return this._owner.type().children();
         },
-
         factory: function() {
             return GraphFactory.getFactory(this.config);
         },
@@ -95,7 +92,7 @@
 
 
         // ---- JSON
-        toJSON: OOP.Extendable.create(function() {
+        toJSON: OOP.Mergeable.create(function() {
             var json = Object.create(null);
             if (this._label) {
                 json.label = this._label;
@@ -103,7 +100,7 @@
             return json;
         }),
 
-        fromJSON: OOP.Extendable.create(function(json, map) {
+        fromJSON: OOP.Mergeable.create(function(json, map) {
             if (json.label && json.label.indexOf('#') != 0) {
                 this._label = json.label;
             }
@@ -484,7 +481,7 @@
         },
 
         add: function(link, downNode) {
-            this._super("add", link);
+            this.super("add", link);
             if (downNode) {
                 link.bindDownNode(downNode);
             } else {
@@ -519,7 +516,7 @@
         },
         free: function() {
             this.links().free();
-            return this._super('free');
+            return this.super('free');
         }
     });
 
@@ -624,7 +621,7 @@
         config: { multilevel: true },
 
         add: function(node, upLink, downGraph) {
-            this._super("add", node);
+            this.super("add", node);
 
             if (upLink) {
                 this.bindUpLink(upLink);
@@ -740,7 +737,7 @@
         config: { multilevel: true },
 
         add: function(graph, upNode) {
-            this._super("add", graph);
+            this.super("add", graph);
 
             if (upNode) {
                 this.bindUpNode(upNode);
@@ -794,7 +791,7 @@
         },
 
         create: function(type, label, owner) {
-            return new this[type.capitalize()](label, owner);
+            return new this[type](label, owner);
         },
 
         createLink: function(label, owner) {
