@@ -15,13 +15,13 @@
         }
     });
 
-    var Direction = OOP.Enum.create(['I-Link', 'O-Link'], {
+    var Direction = OOP.Enum.create(['In', 'Out'], {
         reverse: function() {
             return Direction.members[(this.idx() + 1) % 2];
         }
     });
 
-    var Duality =  OOP.Enum.create(['V-Node', 'E-Node'], {
+    var Duality =  OOP.Enum.create(['Vertex', 'Edge'], {
         dual: function() {
             return Duality.members[(this.idx() + 1) % 2];
         }
@@ -343,7 +343,7 @@
         },
 
         type: function() {
-            return Types.link;
+            return Types.Link;
         },
         bind: function(pair) {
             this._bind('_pair', pair);
@@ -499,7 +499,7 @@
             this._links = this.factory().createLinks(undefined, this);
         },
         type: function() {
-            return Types.node;
+            return Types.Node;
         },
         graph: function() {
             return this._owner._owner;
@@ -529,7 +529,7 @@
             return direction? this._links.container(direction) : this._links;
         },
         direction: function(links) {
-            return this._links[0] === links? Direction['in'] : this._links[1] === links? Direction['out'] : undefined;
+            return this._links[0] === links? Direction['In'] : this._links[1] === links? Direction['Out'] : undefined;
         },
         indexOf: function(links) {
             var direction = this.direction(links);
@@ -653,7 +653,7 @@
             this._nodes = this.factory().createNodes(undefined, this)
         },
         type: function() {
-            return Types.graph;
+            return Types.Graph;
         },
         nodes: function() {
             return this._nodes;

@@ -1,9 +1,9 @@
 describe("G Types", function() {
 
     it("children", function() {
-        expect(G.Types.node.children()).toEqual(G.Types.links);
+        expect(G.Types.Node.children()).toEqual(G.Types.Links);
     });
-})
+});
 
 
 describe("G Default Factory", function() {
@@ -11,7 +11,6 @@ describe("G Default Factory", function() {
 
     it("Factory name", function() {
         expect(factory.fullname).toBe("default");
-
     });
 
 });
@@ -57,5 +56,5 @@ describe("Default Graph", function() {
 
 
 
-})
+});
 

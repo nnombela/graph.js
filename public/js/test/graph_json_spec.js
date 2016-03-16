@@ -50,11 +50,11 @@ describe("G default, directed=true", function() {
     graph.nodes().add(node1).add(node2).addNew();
 
     var link1 = factory.createLink('link1');
-    node1.links(D.in).add(link1);
-    var link3 = node1.links(D.out).addNew();
+    node1.links(D.In).add(link1);
+    var link3 = node1.links(D.Out).addNew();
 
-    var link2 = node2.links(D.out).addNew('link2');
-    var link4 = node2.links(D.in).addNew();
+    var link2 = node2.links(D.Out).addNew('link2');
+    var link4 = node2.links(D.In).addNew();
 
     link1.bind(link2);
     link3.bind(link4);
@@ -89,8 +89,8 @@ describe("G default, dual=true", function() {
     var node1 = factory.createNode('node1');
     var node2 = new factory.Node('node2');
 
-    graph.nodes(D.hvert).add(node1).addNew();
-    graph.nodes(D.hedge).add(node2);
+    graph.nodes(D.Vertex).add(node1).addNew();
+    graph.nodes(D.Edge).add(node2);
 
     var link1 = factory.createLink('link1');
     node1.links().add(link1);
