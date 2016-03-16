@@ -58,7 +58,7 @@ describe("Point - Circle", function() {
 
     var Point = OOP.Class.extend({
         statics: {
-            createNew: function(x, y) {
+            create: function(x, y) {
                 return new Point(x, y);
             }
         },
@@ -85,7 +85,7 @@ describe("Point - Circle", function() {
         mixins: [Color],
 
         statics: {
-            createNew: function(x, y, radius) {
+            create: function(x, y, radius) {
                 return new Circle(x, y, radius);
             }
         },
@@ -93,7 +93,7 @@ describe("Point - Circle", function() {
             this.super('constructor', x, y);
             this.radius = radius;
         },
-        toString: function(str) {
+        toString: function() {
             return this.super('toString') + ':' + this.radius + ', ' + this.color.val();
         }
     });
@@ -110,7 +110,7 @@ describe("Point - Circle", function() {
     });
 
     it("Circle", function() {
-        var circle = Circle.createNew(20, 20, 30);
+        var circle = Circle.create(20, 20, 30);
 
         expect(circle.color).toEqual(Colors['white']);
         expect(circle.toString()).toBe("(20, 20):30, white");

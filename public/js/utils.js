@@ -98,26 +98,22 @@
         return typeof obj === 'function';
     }
 
-    function extend(dst, src) {
+    function extend(dst, src, exec) {
+        exec = exec || function(dst, src, prop) {  dst[prop] = src[prop] };
+
         for (var prop in src) {
             if (Object.prototype.hasOwnProperty.call(src, prop)) {
-                dst[prop] = src[prop]
+                exec(dst, src, prop)
             }
         }
         return dst;
     }
 
     function rExtend(dst, src) {
-        function getRecursivePropertyValue(dstVal, srcVal) {
-            return dstVal && isFunction(dstVal.extend) ?  dstVal.extend(srcVal) : srcVal
-        }
-
-        for (var prop in src) {
-            if (Object.prototype.hasOwnProperty.call(src, prop)) {
-                dst[prop] = getRecursivePropertyValue(dst[prop], src[prop])
-            }
-        }
-        return dst;
+        return extend(dst, src, function(dst, src, prop) {
+            var dstVal = dst[prop], srcVal = src[prop];
+            dst[prop] = dstVal && isFunction(dstVal.extend) ?  dstVal.extend(srcVal) : srcVal
+        })
     }
 
 
