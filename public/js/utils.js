@@ -3,23 +3,109 @@
 //  A few FP and OOP utility functions and objects
 
 (function(root) {
+    //----------   FP
+
+    var toString = Object.prototype.toString,
+        hasOwnProperty = Object.prototype.hasOwnProperty,
+        slice = Array.prototype.slice;
+
+    function isArray(o) {
+        return toString.call(o) === '[object Array]';
+    }
+
+    function isFunction(obj) {
+        return typeof obj === 'function';
+    }
+
+    function extend(dst, src, exec) {
+        exec = exec || function(prop) {  dst[prop] = src[prop] };
+
+        for (var prop in src) {
+            if (hasOwnProperty.call(src, prop)) {
+                exec(prop)
+            }
+        }
+        return dst;
+    }
+
+    function rExtend(dst, src) {
+        return extend(dst, src, function(prop) {
+            var dstVal = dst[prop], srcVal = src[prop];
+            dst[prop] = dstVal && isFunction(dstVal.extend) ? dstVal.extend(srcVal) : srcVal
+        })
+    }
+
+
+    function compose(func1, func2, proto) {
+        function lift(result) {
+            return result === undefined || isArray(result) ? result : [result];
+        }
+        var result = function() {
+            var result = func1.apply(this, arguments);
+            return func2.apply(this, lift(result) || arguments); // if func1 returns undefined then use same arguments
+        };
+        result.__proto__ = proto || Function.prototype;  // yes functions are also objects and have a prototype
+        return result;
+    }
+
+    function inherits(Parent, Constructor) {
+        Constructor = Constructor || Parent;
+
+        var Child = function() {
+            return Constructor.apply(this, arguments);
+        };
+
+        extend(Child, Parent);
+
+        Child.prototype = Object.create(Parent.prototype, {
+            constructor: {
+                value: Child,
+                enumerable: false
+            },
+            $super: {
+                value: function(name) {
+                    var val = Parent.prototype[name];
+                    return val && isFunction(val.apply)? val.apply(this, slice.call(arguments, 1)) : val;
+                },
+                enumerable: false
+            }
+        });
+
+        Child.$parent = Parent;
+
+        return Child;
+    }
+
+
+    function mixin(dst, props) {
+        extend(dst.prototype, props);
+        return dst;
+    }
+
+    // recursive mixin
+    function rMixin(dst, props) {
+        rExtend(dst.prototype, props);
+        return dst;
+    }
+
+    //----------   OOP
+
     var Class = extend(function() {}, {
         mixin: function(props) {
-            return rMixin(this, props);
+            return rMixin(this, props); // recursive mixin
         },
         extend: function(props) {
             if (!props) {
                 return inherits(this);
             }
 
-            var Constructor = isFunction(props)? props :
-                props.hasOwnProperty('constructor')? props.constructor :  this;
+            var Constructor = isFunction(props)? props : props.$constructor || this;
 
             var Child = inherits(this, Constructor);
 
-            extend(Child, props.statics || {});
+            extend(Child, props.$statics || {});
 
-            (props.mixins || []).forEach(function(props) {
+            (props.$mixins || []).forEach(function(props) {
                 Child.mixin(props)
             });
 
@@ -43,7 +129,7 @@
     var Enum = extend(function() {}, {
         create: function(values, props) {
             props = extend(props || {}, {
-                constructor: function(value, index) {
+                $constructor: function(value, index) {
                     this.value = value;
                     this.index = index;
                 },
@@ -87,95 +173,6 @@
             Mergeable: Mergeable
         }
     });
-
-    //----------   Functions
-
-    function isArray(o) {
-        return Object.prototype.toString.call(o) === '[object Array]';
-    }
-
-    function isFunction(obj) {
-        return typeof obj === 'function';
-    }
-
-    function extend(dst, src, exec) {
-        exec = exec || function(dst, src, prop) {  dst[prop] = src[prop] };
-
-        for (var prop in src) {
-            if (Object.prototype.hasOwnProperty.call(src, prop)) {
-                exec(dst, src, prop)
-            }
-        }
-        return dst;
-    }
-
-    function rExtend(dst, src) {
-        return extend(dst, src, function(dst, src, prop) {
-            var dstVal = dst[prop], srcVal = src[prop];
-            dst[prop] = dstVal && isFunction(dstVal.extend) ?  dstVal.extend(srcVal) : srcVal
-        })
-    }
-
-
-    function compose(func1, func2, proto) {
-        function lift(result) {
-            return result === undefined || isArray(result) ? result : [result];
-        }
-        var result = function() {
-            var result = func1.apply(this, arguments);
-            return func2.apply(this, lift(result) || arguments); // if func1 returns undefined then use same arguments
-        };
-        result.__proto__ = proto || Function.prototype;  // yes functions are also objects and have a prototype
-        return result;
-    }
-
-    function inherits(Parent, Constructor) {
-        Constructor = Constructor || Parent;
-
-        var Child = function() {
-            return Constructor.apply(this, arguments);
-        };
-
-        extend(Child, Parent);
-
-        Child.prototype = Object.create(Parent.prototype, {
-            constructor: {
-                value: Child,
-                enumerable: false
-            },
-            super: {
-                value: function(name) {
-                    var val = Parent.prototype[name];
-                    return val && isFunction(val.apply)? val.apply(this, Array.prototype.slice.call(arguments, 1)) : val;
-                },
-                enumerable: false
-            }
-        });
-
-        Child.parent = Parent;
-
-        return Child;
-    }
-
-    function checkConstructorProperty(props) {  // constructor property should not be mixin
-        if (props.propertyIsEnumerable('constructor')) {
-            Object.defineProperty(props, 'constructor', { value : props.constructor, enumerable: false });
-        }
-
-        return props
-    }
-
-    function mixin(dst, props) {
-        extend(dst.prototype, checkConstructorProperty(props));
-        return dst;
-    }
-
-    // recursive mixin
-    function rMixin(dst, props) {
-        rExtend(dst.prototype, checkConstructorProperty(props));
-        return dst;
-    }
-
 })(this);
 
 

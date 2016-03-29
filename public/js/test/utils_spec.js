@@ -3,7 +3,7 @@ describe("Parent - Child", function() {
     var log = [];
 
     var Parent = OOP.Class.extend({
-        constructor: function() {
+        $constructor: function() {
             log.push("Parent constructor");
             this.initialize();
         },
@@ -15,9 +15,9 @@ describe("Parent - Child", function() {
 
 
     var Child = Parent.extend({
-        constructor: function() {
+        $constructor: function() {
             log.push("Child constructor");
-            this.super('constructor');
+            this.$super('constructor');
         },
 
         initialize: function() {
@@ -57,12 +57,12 @@ describe("Parent - Child", function() {
 describe("Point - Circle", function() {
 
     var Point = OOP.Class.extend({
-        statics: {
+        $statics: {
             create: function(x, y) {
                 return new Point(x, y);
             }
         },
-        constructor: function(x, y) {
+        $constructor: function(x, y) {
             this.x = x;
             this.y = y;
         },
@@ -82,19 +82,19 @@ describe("Point - Circle", function() {
     };
 
     var Circle = Point.extend( {
-        mixins: [Color],
+        $mixins: [Color],
 
-        statics: {
+        $statics: {
             create: function(x, y, radius) {
                 return new Circle(x, y, radius);
             }
         },
-        constructor: function(x, y, radius) {
-            this.super('constructor', x, y);
+        $constructor: function(x, y, radius) {
+            this.$super('$constructor', x, y);
             this.radius = radius;
         },
         toString: function() {
-            return this.super('toString') + ':' + this.radius + ', ' + this.color.val();
+            return this.$super('toString') + ':' + this.radius + ', ' + this.color.val();
         }
     });
 
