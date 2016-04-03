@@ -33,10 +33,8 @@
             Types: Types
         },
 
-        $constructor: function(label, owner) {
-            if (label) {
-                this._label = label;
-            }
+        $constructor: function(id, owner) {
+            this.id = id || FP.uniqueId();
             this.initialize(owner);
         },
 
@@ -63,22 +61,8 @@
         factory: function() {
             return GraphFactory.getFactory(this.config);
         },
-        label: function() {
-            return this._label? this._label : this.signature();
-        },
-        signature: function() {
-            function prefix(owner) {
-                var label = owner? owner.label() : undefined;
-                return label? label.indexOf('#') != 0? '#' + label + ':' : label + ':' : '#';
-            }
-            function suffix(owner, owned) {
-                var index = owner? owner.indexOf(owned) : -1;
-                return index != -1? '[' + index + ']' : '';
-            }
-            return prefix(this._owner) + this.type().val() + suffix(this._owner, this);
-        },
         toString: function() {
-            return this.label();
+            return this.type().val() + '#' + this.id;
         },
         index: function() {
             return this._owner? this._owner.indexOf(this) : -1;
@@ -93,18 +77,14 @@
 
         // ---- JSON
         toJSON: OOP.Mergeable.create(function() {
-            var json = Object.create(null);
-            if (this._label) {
-                json.label = this._label;
-            }
-            return json;
+            return { id: this.id }
         }),
 
         fromJSON: OOP.Mergeable.create(function(json, map) {
-            if (json.label && json.label.indexOf('#') != 0) {
-                this._label = json.label;
+            if (json.id) {
+                this.id = json.id;
+                map[json.id] = this;
             }
-            map[this.label()] = this;
         }),
 
         // ---- Private methods
@@ -132,18 +112,17 @@
             this[thisProp] = null;
         },
         _toJsonBind: function(json, name) {
-            var _name = '_' + name;
-            if (this[_name]) {
-                json[name] = this[_name].label();
+            var value = this['_' + name];
+            if (value) {
+                json[name + 'Id'] = value.id;
             }
             return json;
         },
         _fromJsonBound: function(json, map, name) {
-            var bound = json[name];
+            var bound = json[name + 'Id'];
 
             if (bound && map[bound]) {
-                var _name = '_' + name;
-                this._bind(_name, map[bound]);
+                this._bind('_' + name, map[bound]);
             }
         }
     });
@@ -197,14 +176,10 @@
             this._children = [];
         },
 
-        free: function(owned) {
-            if (owned) {
-                this.remove(owned);
-            } else {
-                this.forEach(function(child) {
-                    this.remove(child);
-                })
-            }
+        free: function() {
+            return this.forEach(function(child) {
+                this.remove(child);
+            })
         },
 
         get: function(index) {
@@ -235,11 +210,11 @@
                 throw new Error('This graph object ' + gobj + ' could not be added to ' + this + ' graph container');
             }
         },
-        newChild: function(label) {
-            return this.factory().create(this.type().children(), label);
+        newChild: function(id) {
+            return this.factory().create(this.type().children(), id);
         },
-        addNew: function(label) {
-            var gobj = this.newChild(label);
+        addNew: function(id) {
+            var gobj = this.newChild(id);
             this.add(gobj);
             return gobj;
         },
@@ -274,15 +249,15 @@
         names: ['0', '1'],
 
         initialize: function(owner) {
-            this[0] = new this.Container(undefined, owner);
-            this[1] = new this.Container(undefined, owner);
+            this[0] = new this.Container(this.names[0] + '#' + this.id, owner);
+            this[1] = new this.Container(this.names[1] + '#' + this.id, owner);
         },
 
         factory: function() {
             return this._owner.factory();
         },
         container: function(enumerator) {
-            return this[enumerator.idx()];
+            return this[enumerator ? enumerator.idx() : 0];
         },
         get: function(index) {
             var size0 = this[0].size();
@@ -300,7 +275,6 @@
         find: function(func) {
             var result = this[0].find(func);
             return result? result : this[1].find(func);
-
         },
         size: function() {
             return this[0].size() + this[1].size();
@@ -308,20 +282,15 @@
         add: function(gobj, enumerator) {
             return this.container(enumerator).add(gobj);
         },
-        addNew: function(label, enumerator) {
-            return enumerator? this.container(enumerator).addNew(label) : this[0].addNew(label);
+        addNew: function(id, enumerator) {
+            return this.container(enumerator).addNew(id);
         },
         remove: function(gobj) {
-            var idx = this[0].remove(gobj);
-            return idx !== -1? idx : this[1].remove(gobj);
+            return gobj._owner.remove(gobj);
         },
-        free: function(owned) {
-            if (owned) {
-                return this.remove(owned);
-            } else {
-                this[0].free();
-                this[1].free();
-            }
+        free: function() {
+            this[0].free();
+            this[1].free();
         },
         toJSON: function() {
             var json = Object.create(null);
@@ -743,7 +712,7 @@
                 this.bindUpNode(upNode);
             } else {
                 var upNodes = this._owner.nodes();
-                upNodes.add(upNodes.newChild(), undefined, graph);
+                upNodes.add(upNodes.newChild(), graph);
             }
             return graph;
         }
@@ -790,27 +759,27 @@
             FP.extend(this, props);
         },
 
-        create: function(type, label, owner) {
-            return new this[type](label, owner);
+        create: function(type, id, owner) {
+            return new this[type.val()](id, owner);
         },
 
-        createLink: function(label, owner) {
-            return new this.Link(label, owner)
+        createLink: function(id, owner) {
+            return new this.Link(id, owner)
         },
-        createLinks: function(label, owner) {
-            return new this.Links(label, owner)
+        createLinks: function(id, owner) {
+            return new this.Links(id, owner)
         },
-        createNode: function(label, owner) {
-            return new this.Node(label, owner)
+        createNode: function(id, owner) {
+            return new this.Node(id, owner)
         },
-        createNodes: function(label, owner) {
-            return new this.Nodes(label, owner)
+        createNodes: function(id, owner) {
+            return new this.Nodes(id, owner)
         },
-        createGraph: function(label, owner) {
-            return new this.Graph(label, owner)
+        createGraph: function(id, owner) {
+            return new this.Graph(id, owner)
         },
-        createGraphs: function(label, owner) {
-            return new this.Graphs(label, owner)
+        createGraphs: function(id, owner) {
+            return new this.Graphs(id, owner)
         }
     });
 

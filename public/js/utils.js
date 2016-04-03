@@ -88,6 +88,10 @@
         return dst;
     }
 
+    function uniqueId() {
+        return Math.random().toString(36).substr(2, 10);
+    }
+    
     //----------   OOP
 
     var Class = extend(function() {}, {
@@ -165,7 +169,8 @@
             inherits: inherits,
             compose: compose,
             mixin: mixin,
-            rMixin: rMixin
+            rMixin: rMixin,
+            uniqueId: uniqueId
         },
         OOP: {
             Class: Class,
