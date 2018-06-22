@@ -1,40 +1,37 @@
 //  graph.js 0.9
 //  (c) 2013 nnombela@gmail.com.
 //  Graph library
-(function(root) {
-    // dependencies
-    var OOP = root.OOP, FP = root.FP;
-
+(function(root, OOP, FP) {
     // Enums
-    var Types = OOP.Enum.create(['Graphs', 'Graph', 'Nodes', 'Node', 'Links', 'Link'], {
-        children: function() {
+    const Types = OOP.Enum.create(['Graphs', 'Graph', 'Nodes', 'Node', 'Links', 'Link'], {
+        children() {
             return Types.members[this.idx() + 1];
         },
-        parent: function() {
+        parent() {
             return Types.members[this.idx() - 1];
         }
     });
 
-    var Direction = OOP.Enum.create(['In', 'Out'], {
-        reverse: function() {
+    const Direction = OOP.Enum.create(['In', 'Out'], {
+        reverse() {
             return Direction.members[(this.idx() + 1) % 2];
         }
     });
 
-    var Duality =  OOP.Enum.create(['Vertex', 'Edge'], {
-        dual: function() {
+    const Duality =  OOP.Enum.create(['Vertex', 'Edge'], {
+        dual() {
             return Duality.members[(this.idx() + 1) % 2];
         }
     });
 
     // Graph objects
-    var GraphObject = OOP.Class.extend({
+    const GraphObject = OOP.Class.extend({
         $statics: {
             Types: Types
         },
 
         $constructor: function(id, owner) {
-            this.id = id || FP.uniqueId();
+            this.id = id || OOP.uniqueId();
             this.initialize(owner);
         },
 
@@ -49,29 +46,29 @@
 
         free: OOP.Mergeable.create(function() {
             if (this._owner) {
-                var owner = this._owner;
+                let owner = this._owner;
                 this._owner = null;
                 owner.free(this);
             }
         }),
 
-        type: function() {
-            return this._owner.type().children();
+        type() {
+            return this._owner ? this._owner.type().children() : undefined;
         },
-        factory: function() {
-            return GraphFactory.getFactory(this.config);
+        factory() {
+            return GraphFactory.getByConfig(this.config);
         },
-        toString: function() {
+        toString() {
             return this.type().val() + '#' + this.id;
         },
-        index: function() {
-            return this._owner? this._owner.indexOf(this) : -1;
+        index() {
+            return this._owner ? this._owner.indexOf(this) : -1;
         },
-        indexOf: function() {
+        indexOf() {
             return -1;
         },
-        belongsTo: function(type) {
-            return type === undefined || this.type() === type? this._owner : this._owner.belongsTo(type);
+        belongsTo(type) {
+            return type === undefined || this.type() === type ? this._owner : this._owner.belongsTo(type);
         },
 
 
@@ -89,27 +86,25 @@
 
         // ---- Private methods
 
-        _bind: function(thisProp, that, thatProp) { // "this" is implicit
-            thatProp = thatProp || thisProp; // if not given thatProp will be thisProp
-            if (this[thisProp] === null && that[thatProp] === null) {
-                this[thisProp] = that;
-                that[thatProp] = this;
+        _bind: function(prop, that) { // "this" is implicit
+            if (this[prop] === null && that[prop] === null) {
+                this[prop] = that;
+                that[prop] = this;
 
-            } else if (this[thisProp] !== that) { // it is already bound
-                throw new Error(this + ' object is already bound to ' + this[thisProp]);
-            } else if (that[thatProp] !== this) { // it is already bound
+            } else if (this[prop] !== that) { // it is already bound
+                throw new Error(this + ' object is already bound to ' + this[prop]);
+            } else if (that[prop] !== this) { // it is already bound
                 throw new Error(that + ' object is already bound to ' + that[thatProp]);
             }
         },
-        _unbind: function(thisProp, thatProp) {
-            thatProp = thatProp || thisProp; // if not given thatProp will be thisProp
-            var that = this[thisProp];
+        _unbind: function(prop) {
+            var that = this[prop];
 
-            if (that == null || that[thatProp] !== this || this[thisProp] !== that) {
-                throw new Error(thisProp + ' property and ' + thatProp + ' are not bound to each other');
+            if (that == null || that[prop] !== this) {
+                throw new Error(prop + ' property can not be unbind');
             }
-            that[thatProp] = null;
-            this[thisProp] = null;
+            that[prop] = null;
+            this[prop] = null;
         },
         _toJsonBind: function(json, name) {
             var value = this['_' + name];
@@ -127,7 +122,7 @@
         }
     });
 
-    var Iterability = {
+    var Iterable = {
         Iterator: OOP.Class.extend({
             $constructor: function(container) {
                 this.container = container;
@@ -151,7 +146,7 @@
         }
     };
 
-    var Accessibility = {
+    var Accessible = {
         Accessor: OOP.Class.extend({
             $constructor: function(container) {
                 this.container = container;
@@ -170,7 +165,7 @@
     };
 
     var GraphContainer = GraphObject.extend({
-        $mixins: [Iterability, Accessibility],
+        $mixins: [Iterable, Accessible],
 
         initialize: function() {
             this._children = [];
@@ -188,15 +183,17 @@
         size: function() {
             return this._children.length;
         },
-        forEach: function(func) {
-            this._children.forEach(func);
-            return this;
+        empty: function() {
+            return this.size() === 0;
+        },
+        forEach: function(func, thisArg) {
+            this._children.forEach(func, thisArg || this);
         },
         indexOf: function(child) {
             return this._children.indexOf(child);
         },
-        find: function(func) {
-            return this._children.find(func);
+        find: function(func, thisArg) {
+            return this._children.find(func, thisArg || this);
         },
         contains: function(gobj) {
             return this.indexOf(gobj) !== -1;
@@ -233,16 +230,15 @@
             })
         },
         fromJSON: function(json, map) {
-            var container = this;
             json.forEach(function(child) {
-                container.addNew().fromJSON(child, map);
-            });
+                this.addNew().fromJSON(child, map);
+            }, this);
         }
     });
 
 
     var DuoGraphContainer = GraphObject.extend({
-        $mixins: [Iterability, Accessibility],
+        $mixins: [Iterable, Accessible],
 
         Container: GraphContainer,
 
@@ -253,9 +249,6 @@
             this[1] = new this.Container(this.names[1] + '#' + this.id, owner);
         },
 
-        factory: function() {
-            return this._owner.factory();
-        },
         container: function(enumerator) {
             return this[enumerator ? enumerator.idx() : 0];
         },
@@ -268,16 +261,19 @@
             return indexOf0 === -1? indexOf0 : this[1].indexOf(gobj);
         },
         forEach: function(func) {
-            this[0].forEach(func);
-            this[1].forEach(func);
+            this[0].forEach(func, this);
+            this[1].forEach(func, this);
             return this;
         },
         find: function(func) {
-            var result = this[0].find(func);
-            return result? result : this[1].find(func);
+            var result = this[0].find(func, this);
+            return result? result : this[1].find(func, this);
         },
         size: function() {
             return this[0].size() + this[1].size();
+        },
+        empty: function() {
+            return this.size() === 0;
         },
         add: function(gobj, enumerator) {
             return this.container(enumerator).add(gobj);
@@ -304,6 +300,48 @@
         }
     });
 
+    var MLGraphObject = GraphObject.extend({
+        initialize: function(owner) {
+            this.link = this.factory().createLink(undefined, owner);
+            this.node = this.factory().createNode(undefined, owner);
+            this.graph = this.factory().createGraph(undefined, owner);
+        },
+        free: function() {
+            this.link.free();
+            this.node.free();
+            this.graph.free();
+        }
+    });
+
+    var MLGraphContainer = GraphContainer.extend({
+        initialize: function(owner) {
+            this.links = this.factory().createLinks();
+            this.nodes = this.factory().createNodes();
+            this.graphs = this.factory().createGraphs();
+        },
+        free: function(child) {
+            this.links.free(child);
+            this.nodes.free(child);
+            this.graphs.free(child);
+        },
+
+
+        add: function(child) {
+            this.links.add(child.link, this);
+            this.nodes.add(child.node, this);
+            this.graphs.add(child.graph, this);
+
+            return this.$super('add', child);
+        },
+        remove: function(child) {
+            this.links.remove(child.link, this);
+            this.nodes.remove(child.node, this);
+            this.graphs.remove(child.graph, this);
+
+            return this.$super('remove', child);
+        }
+    });
+
 // ---- Link
 
     var Link = GraphObject.extend({
@@ -314,17 +352,23 @@
         type: function() {
             return Types.Link;
         },
+        checkCanBeBound: OOP.Mergeable.create(function(pair) {
+            if (pair.from() === null) {
+                throw new Error(pair + ' has to be belong to a node');
+            }
+        }),
         bind: function(pair) {
+            this.checkCanBeBound(pair);
             this._bind('_pair', pair);
         },
         unbind: function() {
             this._unbind('_pair')
         },
-        node: function() {
-            return this._owner._owner;
+        from: function() {
+            return this.belongsTo(Types.Node);
         },
         to: function() {
-            return this._pair.node();
+            return this._pair ? this._pair.from() : null;
         },
         pair: function() {
             return this._pair;
@@ -345,85 +389,49 @@
     var LinkDirected = {
         config: {directed: true},
 
-        initialize: function() {
-            this._reverse = null;
-        },
-
-        bind: function(pair) {
-            if (this.direction().reverse() == pair.direction()) {
-                this._bind('_pair', pair);
-                // TODO: find reverse and bind in case
-            } else {
+        checkCanBeBound: function(pair) {
+            if (this.direction().reverse() !== pair.direction()) {
                 throw new Error('Incorrect direction: ' + pair.direction());
             }
         },
-        reverse: function() {
-            return this._reverse;
+        reverse: function () {
+            var node = this.from();
+            return node ? node
+                .links(this.direction().reverse())
+                .find(function (link) {
+                    return link.from() == node
+                })
+                : null
         },
-        bindReverse: function(reverse) {
-            if (this.belongsTo().reverse() === reverse.belongsTo()) {
-                this._bind('_reverse', reverse);
-            } else {
-                throw new Error("This " + this + " can not be reverse bound with that " + reverse)
-            }
-        },
-        unbindReverse: function() {
-            this._unbind('_reverse')
-        },
-
         direction: function() {
-            return this._owner.direction();
-        },
-        toJSON: function(json) {
-            return this._toJsonBind(json, 'reverse');
-        },
-        fromJSON: function(json, map) {
-            this._fromJsonBound(json, map, 'reverse');
-        },
-        free: function() {
-            this.unbindReverse();
+            return this.belongsTo().direction();
         }
     };
 
     var LinkMultilevel = {
         config: { multilevel: true },
 
-        initialize: function() {
-            this._downNode = null;
-            this._inverse = null;
+        initialize: function(owner, multilevel) {
+            this._multilevel = multilevel;
+        },
+        multilevel: function () {
+            return this._multilevel;
+        },
+        checkCanBeBound: function (pair) {
+            if (!pair.from().inverse().links().empty()) {
+                throw new Error(pair + ' can not be multilevel bound');
+            }
+        },
+        inverse: function() {
+            var inverseNode = this.from().inverse(); // this.node().multilevel().link.to()
+            return inverseNode ? inverseNode.links().get(this.index()) : null;
         },
 
-        inverse: function() {
-            return this._inverse;
-        },
-        bindInverse: function(pair) {
-            this._bind('_inverse', pair);
-        },
-        unbindInverse: function() {
-            this._unbind('_inverse')
-        },
-        bindDownNode: function(downNode) {
-            this._bind('_downNode', downNode, '_upLink');
-        },
-        unbindDownNode: function() {
-            this._unbind('_downNode', '_upLink')
-        },
-        downNode: function() {
-            return this._downNode;
-        },
         toJSON: function(json) {
-            this._toJsonBind(json, 'inverse');
-            return this._toJsonBind(json, 'downNode');
+            json.multilevelId = this._multilevel.id
         },
         fromJSON: function(json, map) {
-            this._fromJsonBound(json, map, 'inverse');
-            this._fromJsonBound(json, map, 'downNode');
-        },
-        free: function() {
-            this.unbindInverse();
-            var downNode = this.downNode();
-            this.unbindDownNode();
-            downNode.free();
+            this._multilevel = map[json.multilevelId];
         }
     };
 
@@ -435,10 +443,10 @@
         names: Direction.values,
 
         reverse: function() {
-            return this._owner.links(this.direction().reverse());
+            return this.belongsTo().links(this.direction().reverse());
         },
         direction: function() {
-            return this._owner.direction(this);
+            return this.belongsTo().direction(this);
         }
     };
 
@@ -730,32 +738,32 @@
 
             register: function(config, props) {
                 var factory = new GraphFactory(config, props);
-                GraphFactory[factory.fullname] = factory;
+                GraphFactory[factory.name] = factory;
                 return factory;
             },
-            getFactory: function(config) {
-                return GraphFactory[GraphFactory._configToFullname(config || {})];
+            getByConfig: function(config) {
+                return GraphFactory[GraphFactory._configToName(config || {})];
             },
-            getFactoryByFullname: function(fullname) {
+            getFactoryByName: function(fullname) {
                 return GraphFactory[fullname]
             },
-            _configToFullname: function(config) {
-                var fullname = config.name || 'default';
+            _configToName: function(config) {
+                var name = config.name || 'default';
                 if (config.directed) {
-                    fullname += '_directed';
+                    name += '_directed';
                 }
                 if (config.dual) {
-                    fullname += '_dual';
+                    name += '_dual';
                 }
                 if (config.multilevel) {
-                    fullname += '_multilevel';
+                    name += '_multilevel';
                 }
-                return fullname;
+                return name;
             }
         },
         $constructor: function(config, props) {
             this.config = config;
-            this.fullname = GraphFactory._configToFullname(config);
+            this.name = GraphFactory._configToName(config);
             FP.extend(this, props);
         },
 
@@ -784,7 +792,7 @@
     });
 
     var Directed = {
-        config: {directed: true}
+        config: { directed: true }
     };
 
     var Multilevel = {
@@ -792,7 +800,7 @@
     };
 
     var Dual = {
-        config: {dual: true}
+        config: { dual: true }
     };
 
     GraphFactory.register({name: 'default'}, {
@@ -980,7 +988,7 @@
     exports.G = GraphFactory;
 
 
-})(this);
+})(this, this.OOP, this.FP);
 
 
 

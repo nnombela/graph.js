@@ -3,7 +3,7 @@ var G = this.G;
 
 describe("G default", function() {
 
-    var factory = G.getFactory();
+    var factory = G.getByConfig();
 
     var graph = factory.createGraph('graph1');
 
@@ -37,7 +37,7 @@ describe("G default", function() {
 
 describe("G default, directed=true", function() {
 
-    var factory = G.getFactory({directed: true});
+    var factory = G.getByConfig({directed: true});
 
     var D = G.Direction;
 
@@ -59,8 +59,8 @@ describe("G default, directed=true", function() {
     link1.bind(link2);
     link3.bind(link4);
 
-    link1.bindReverse(link3);
-    link2.bindReverse(link4);
+    //link1.bindReverse(link3);
+    //link2.bindReverse(link4);
 
 
     it("stringify - parse", function() {
@@ -79,7 +79,7 @@ describe("G default, directed=true", function() {
 
 describe("G default, dual=true", function() {
 
-    var factory = G.getFactory({dual: true});
+    var factory = G.getByConfig({dual: true});
 
     var D = G.Duality;
 
@@ -120,7 +120,7 @@ describe("G default, dual=true", function() {
 
 describe("G default, multilevel=true", function() {
 
-    var factory = G.getFactory({multilevel: true});
+    var factory = G.getByConfig({multilevel: true});
 
     var top = factory.createGraph('top');
 

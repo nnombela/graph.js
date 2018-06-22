@@ -28,6 +28,7 @@
         return dst;
     }
 
+    // recursive extend, use extend function of destination property if exists, identity function otherwise
     function rExtend(dst, src) {
         return extend(dst, src, function(prop) {
             var dstVal = dst[prop], srcVal = src[prop];
@@ -35,16 +36,20 @@
         })
     }
 
+    function asArray(result) {
+        return result === undefined || isArray(result) ? result : [result];
+    }
 
     function compose(func1, func2, proto) {
-        function lift(result) {
-            return result === undefined || isArray(result) ? result : [result];
-        }
+        var isFunction1 = isFunction(func1), isFunction2 = isFunction(func2);
         var result = function() {
-            var result = func1.apply(this, arguments);
-            return func2.apply(this, lift(result) || arguments); // if func1 returns undefined then use same arguments
+            var result = isFunction1 ? func1.apply(this, arguments) : undefined;
+            // if func1 returns undefined then use same arguments (identity function)
+            return isFunction2 ? func2.apply(this, asArray(result) || arguments) : result || arguments;
         };
-        result.__proto__ = proto || Function.prototype;  // yes functions are also objects and have a prototype
+        if (proto) {
+            result.__proto__ = proto;  // yes functions are also objects and have a prototype
+        }
         return result;
     }
 
@@ -98,31 +103,27 @@
         mixin: function(props) {
             return rMixin(this, props); // recursive mixin
         },
-        extend: function(props) {
+        extend: function(props) { // Class.extend is actually inherits
             if (!props) {
                 return inherits(this);
             }
-
-            var Constructor = isFunction(props)? props : props.$constructor || this;
-
+            var Constructor = isFunction(props) ? props : props.$constructor || this;
             var Child = inherits(this, Constructor);
 
-            extend(Child, props.$statics || {});
-
-            (props.$mixins || []).forEach(function(props) {
-                Child.mixin(props)
-            });
-
-            return Child.mixin(props);
+            if (props.$statics) { // special $statics property
+                extend(Child, props.$statics)
+            }
+            if (props.$mixins) { // special $mixins property
+                asArray(props.$mixins).forEach(function(mixinProps) { Child.mixin(mixinProps) })
+            }
+            return Child.mixin(props)
         }
     });
 
     var Mergeable = extend(function() {}, {
         extend: function(obj) {
-            // in case both are functions then compose them with this as proto
-            var instance = isFunction(this) && isFunction(obj)?
-              compose(this, obj, this) : Object.create(this);
-
+            // in case any is a function then compose otherwise create new object
+            var instance = isFunction(this) || isFunction(obj) ? compose(this, obj, this) : Object.create(this);
             return rExtend(instance, obj);
         },
         create: function(obj) {
@@ -145,22 +146,21 @@
                 },
                 toString: function() {
                     return this.value;
+                },
+                $statics: {
+                    values: values
                 }
             });
 
-            var Enum = Class.extend(props);
-
-            Enum.values = values;
-
-            Enum.members = values.map(function(elem, idx) {
-                return Enum[elem] = new Enum(elem, idx)
+            var instance = Class.extend(props);
+            instance.members = values.map(function(elem, idx) {
+                return instance[elem] = new instance(elem, idx)
             });
-
-            return Enum;
+            return instance;
         }
     });
 
-    var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
+    var exports = typeof exports !== "undefined" ? exports : root;   // CommonJS module support
 
     return extend(exports, {
         FP: {
@@ -169,13 +169,13 @@
             inherits: inherits,
             compose: compose,
             mixin: mixin,
-            rMixin: rMixin,
-            uniqueId: uniqueId
+            rMixin: rMixin
         },
         OOP: {
             Class: Class,
             Enum: Enum,
-            Mergeable: Mergeable
+            Mergeable: Mergeable,
+            uniqueId: uniqueId
         }
     });
 })(this);

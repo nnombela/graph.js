@@ -41,10 +41,13 @@ describe("Parent - Child", function() {
     it("Child", function() {
         var child = new Child();
 
-        expect(log[0]).toBe('Child constructor');
-        expect(log[1]).toBe('Parent constructor');
-        expect(log[2]).toBe('Parent initialize');
-        expect(log[3]).toBe('Child initialize');
+        expect(log).toEqual([
+            'Child constructor',
+            'Parent constructor',
+            'Parent initialize',
+            'Child initialize'
+        ]);
+
         expect(child.config.a).toBe('a');
         expect(child.config.b).toBe('b');
     })
@@ -71,18 +74,18 @@ describe("Point - Circle", function() {
         }
     });
 
-    var Colors = OOP.Enum.create(['white', 'black'], {
+    var Colors = OOP.Enum.create(['White', 'Black'], {
         reverse: function() {
-            return this === Colors['white']? Colors['black'] : Colors['white'];
+            return Colors.members[(this.idx() + 1) % 2];
         }
     });
 
-    var Color = {
-        color: Colors.white
+    var WhiteColor = {
+        color: Colors.White
     };
 
     var Circle = Point.extend( {
-        $mixins: [Color],
+        $mixins: [WhiteColor],
 
         $statics: {
             create: function(x, y, radius) {
@@ -94,11 +97,20 @@ describe("Point - Circle", function() {
             this.radius = radius;
         },
         toString: function() {
-            return this.$super('toString') + ':' + this.radius + ', ' + this.color.val();
+            return this.$super('toString') + ':' + this.radius + ' in ' + this.color.val();
         }
     });
 
     beforeEach(function() {
+    });
+
+    it("has a black color when reversed", function() {
+        expect(Colors.White.reverse()).toBe(Colors.Black);
+    });
+
+    it("has black and white possible colors", function() {
+        expect(Colors.members).toEqual([Colors.White, Colors.Black]);
+        expect(Colors.values).toEqual(['White', 'Black']);
     });
 
 
@@ -106,14 +118,13 @@ describe("Point - Circle", function() {
         var point = new Point(10, 10);
 
         expect(point.toString()).toBe("(10, 10)");
-
     });
 
     it("Circle", function() {
         var circle = Circle.create(20, 20, 30);
 
-        expect(circle.color).toEqual(Colors['white']);
-        expect(circle.toString()).toBe("(20, 20):30, white");
+        expect(circle.color.reverse()).toEqual(Colors.Black);
+        expect(circle.toString()).toBe("(20, 20):30 in White");
     })
 
 

@@ -7,16 +7,16 @@ describe("G Types", function() {
 
 
 describe("G Default Factory", function() {
-    var factory = G.getFactory();
+    var factory = G.getByConfig();
 
     it("Factory name", function() {
-        expect(factory.fullname).toBe("default");
+        expect(factory.name).toBe("default");
     });
 
 });
 
 describe("Default Graph", function() {
-    var factory = G.getFactory();
+    var factory = G.getByConfig();
 
     var graph = factory.createGraph('graph1');
 
