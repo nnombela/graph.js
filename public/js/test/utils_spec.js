@@ -7,10 +7,10 @@ describe("Parent - Child", function() {
             log.push("Parent constructor");
             this.initialize();
         },
-        initialize: OOP.Mergeable.create(function() {
+        initialize: OOP.Extensible.create(function() {
             log.push("Parent initialize");
         }),
-        config: OOP.Mergeable.create({ a: 'a' })
+        config: OOP.Extensible.create({ a: 'a' })
     });
 
 

@@ -35,16 +35,16 @@
             this.initialize(owner);
         },
 
-        config: OOP.Mergeable.create({name: 'default'}),
+        config: OOP.Extensible.create({name: 'default'}),
 
-        initialize: OOP.Mergeable.create(function(owner) {
+        initialize: OOP.Extensible.create(function(owner) {
             if (this._owner) {
                 throw new Error(this + ' is already initialized with ' + this._owner);
             }
             this._owner = owner;
         }),
 
-        free: OOP.Mergeable.create(function() {
+        free: OOP.Extensible.create(function() {
             if (this._owner) {
                 let owner = this._owner;
                 this._owner = null;
@@ -73,11 +73,11 @@
 
 
         // ---- JSON
-        toJSON: OOP.Mergeable.create(function() {
+        toJSON: OOP.Extensible.create(function() {
             return { id: this.id }
         }),
 
-        fromJSON: OOP.Mergeable.create(function(json, map) {
+        fromJSON: OOP.Extensible.create(function(json, map) {
             if (json.id) {
                 this.id = json.id;
                 map[json.id] = this;
@@ -352,7 +352,7 @@
         type: function() {
             return Types.Link;
         },
-        checkCanBeBound: OOP.Mergeable.create(function(pair) {
+        checkCanBeBound: OOP.Extensible.create(function(pair) {
             if (pair.from() === null) {
                 throw new Error(pair + ' has to be belong to a node');
             }

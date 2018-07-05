@@ -99,8 +99,9 @@
     }
 
     function uniqueId() {
-        return Math.random().toString(36).substr(2, 10);
+        return (Math.random().toString(36) + '00000000000000000').substr(2, 10) + '-' + (new Date()).getTime().toString(36);
     }
+
     
     //----------   OOP
 
@@ -125,7 +126,7 @@
         }
     });
 
-    var Mergeable = extend(function() {}, {
+    var Extensible = extend(function() {}, {
         extend: function(obj) {
             // in case any is a function then compose otherwise create new object
             var instance = isFunction(this) || isFunction(obj) ? compose(this, obj, this) : Object.create(this);
@@ -180,7 +181,7 @@
         OOP: {
             Class: Class,
             Enum: Enum,
-            Mergeable: Mergeable,
+            Extensible: Extensible,
             uniqueId: uniqueId
         }
     });
