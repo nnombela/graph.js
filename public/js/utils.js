@@ -17,23 +17,28 @@
         return typeof obj === 'function';
     }
 
-    function extend(dst, src, exec) {
-        exec = exec || function(prop) {  dst[prop] = src[prop] };
+    function identity(value) {
+        return value;
+    }
+
+    function extend(dst, src, extendingFn) {
+        extendingFn = extendingFn || identity;
 
         for (var prop in src) {
             if (hasOwnProperty.call(src, prop)) {
-                exec(prop)
+                dst[prop] = extendingFn.call(dst[prop], src[prop])
             }
         }
         return dst;
     }
 
-    // recursive extend, use extend function of destination property if exists, identity function otherwise
+    // recursive extend, use extend function of caller or identity function otherwise
+    function rExtendingFn(value) {
+        return this && isFunction(this.extend) ? this.extend(value) : value;
+    }
+
     function rExtend(dst, src) {
-        return extend(dst, src, function(prop) {
-            var dstVal = dst[prop], srcVal = src[prop];
-            dst[prop] = dstVal && isFunction(dstVal.extend) ? dstVal.extend(srcVal) : srcVal
-        })
+        return extend(dst, src, rExtendingFn)
     }
 
     function asArray(result) {
@@ -43,9 +48,9 @@
     function compose(func1, func2, proto) {
         var isFunction1 = isFunction(func1), isFunction2 = isFunction(func2);
         var result = function() {
-            var result = isFunction1 ? func1.apply(this, arguments) : undefined;
             // if func1 returns undefined then use same arguments (identity function)
-            return isFunction2 ? func2.apply(this, asArray(result) || arguments) : result || arguments;
+            var result = isFunction1 ? func1.apply(this, arguments) : slice.call(arguments);
+            return isFunction2 ? func2.apply(this, asArray(result) || arguments) : result;
         };
         if (proto) {
             result.__proto__ = proto;  // yes functions are also objects and have a prototype
@@ -164,6 +169,7 @@
 
     return extend(exports, {
         FP: {
+            identity: identity,
             extend: extend,
             rExtend: rExtend,
             inherits: inherits,
