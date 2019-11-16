@@ -3,7 +3,7 @@ var G = this.G;
 
 describe("G default", function() {
 
-    var factory = G.getByConfig();
+    var factory = G.getFactoryByConfig();
 
     var graph = factory.createGraph('graph1');
 
@@ -37,7 +37,7 @@ describe("G default", function() {
 
 describe("G default, directed=true", function() {
 
-    var factory = G.getByConfig({directed: true});
+    var factory = G.getFactoryByConfig({directed: true});
 
     var D = G.Direction;
 
@@ -79,7 +79,7 @@ describe("G default, directed=true", function() {
 
 describe("G default, dual=true", function() {
 
-    var factory = G.getByConfig({dual: true});
+    var factory = G.getFactoryByConfig({dual: true});
 
     var D = G.Duality;
 
@@ -120,7 +120,7 @@ describe("G default, dual=true", function() {
 
 describe("G default, multilevel=true", function() {
 
-    var factory = G.getByConfig({multilevel: true});
+    var factory = G.getFactoryByConfig({multilevel: true});
 
     var top = factory.createGraph('top');
 

@@ -1,5 +1,5 @@
-//  graph.js 0.9
-//  (c) 2013 nnombela@gmail.com.
+//  graph.js 2.0
+//  (c) 2019 nnombela@gmail.com.
 //  Graph library
 (function(root, OOP, FP) {
     // Enums
@@ -27,10 +27,10 @@
     // Graph objects
     const GraphObject = OOP.Class.extend({
         $statics: {
-            Types: Types
+            Types, Direction, Duality
         },
 
-        $constructor: function(id, owner) {
+        $constructor(id, owner) {
             this.id = id || OOP.uniqueId();
             this.initialize(owner);
         },
@@ -56,7 +56,7 @@
             return this._owner ? this._owner.type().children() : undefined;
         },
         factory() {
-            return GraphFactory.getByConfig(this.config);
+            return GraphFactory.getFactoryByConfig(this.config);
         },
         toString() {
             return this.type().val() + '#' + this.id;
@@ -86,7 +86,7 @@
 
         // ---- Private methods
 
-        _bind: function(prop, that) { // "this" is implicit
+        _bind(prop, that) { // "this" is implicit
             if (this[prop] === null && that[prop] === null) {
                 this[prop] = that;
                 that[prop] = this;
@@ -97,108 +97,106 @@
                 throw new Error(that + ' object is already bound to ' + that[thatProp]);
             }
         },
-        _unbind: function(prop) {
-            var that = this[prop];
-
+        _unbind(prop) {
+            const that = this[prop];
             if (that == null || that[prop] !== this) {
                 throw new Error(prop + ' property can not be unbind');
             }
             that[prop] = null;
             this[prop] = null;
         },
-        _toJsonBind: function(json, name) {
-            var value = this['_' + name];
+        _toJsonBind(json, name) {
+            const value = this['_' + name];
             if (value) {
                 json[name + 'Id'] = value.id;
             }
             return json;
         },
-        _fromJsonBound: function(json, map, name) {
-            var bound = json[name + 'Id'];
-
+        _fromJsonBound(json, map, name) {
+            const bound = json[name + 'Id'];
             if (bound && map[bound]) {
                 this._bind('_' + name, map[bound]);
             }
         }
     });
 
-    var Iterable = {
+    const Iterable = {
         Iterator: OOP.Class.extend({
-            $constructor: function(container) {
+            $constructor(container) {
                 this.container = container;
                 this._cursor = -1;
             },
-            current: function() {
+            current() {
                 return this.container.get(this._cursor);
             },
-            next: function() {
+            next() {
                 return this.container.get(++this._cursor);
             },
-            hasNext: function() {
+            hasNext() {
                 return this._cursor + 1 < this.container.size();
             },
-            index: function() {
+            index() {
                 return this._cursor;
             }
         }),
-        iterator: function() {
+        iterator() {
             return new this.Iterator(this);
         }
     };
 
-    var Accessible = {
+    const Accessible = {
         Accessor: OOP.Class.extend({
-            $constructor: function(container) {
+            $constructor(container) {
                 this.container = container;
                 this.array = [];
             },
-            get: function(gobj) {
+            get(gobj) {
                 return this.array[gobj.index()];
             },
-            members: function(gobj, value) {
+            members(gobj, value) {
                 this.array[gobj.index()] = value;
             }
         }),
-        accessor: function() {
+        accessor() {
             return new this.Accessor(this);
         }
     };
 
-    var GraphContainer = GraphObject.extend({
+    const GraphContainer = GraphObject.extend({
         $mixins: [Iterable, Accessible],
 
-        initialize: function() {
+        initialize() {
             this._children = [];
         },
 
-        free: function() {
+        free() {
             return this.forEach(function(child) {
                 this.remove(child);
             })
         },
 
-        get: function(index) {
+        get(index) {
             return this._children[index];
         },
-        size: function() {
+        size() {
             return this._children.length;
         },
-        empty: function() {
+        empty() {
             return this.size() === 0;
         },
-        forEach: function(func, thisArg) {
+        forEach(func, thisArg) {
             this._children.forEach(func, thisArg || this);
         },
-        indexOf: function(child) {
+        indexOf(child) {
             return this._children.indexOf(child);
         },
-        find: function(func, thisArg) {
+        find(func, thisArg) {
             return this._children.find(func, thisArg || this);
         },
-        contains: function(gobj) {
+        contains(gobj) {
             return this.indexOf(gobj) !== -1;
         },
-        add: function(gobj) {
+        add(gobj) {
             if (gobj.type() === this.type().children() ) {
                 gobj.initialize(this);
                 this._children.push(gobj);
@@ -207,16 +205,16 @@
                 throw new Error('This graph object ' + gobj + ' could not be added to ' + this + ' graph container');
             }
         },
-        newChild: function(id) {
+        newChild(id) {
             return this.factory().create(this.type().children(), id);
         },
-        addNew: function(id) {
-            var gobj = this.newChild(id);
+        addNew(id) {
+            const gobj = this.newChild(id);
             this.add(gobj);
             return gobj;
         },
-        remove: function(gobj) {
-            var idx = this.indexOf(gobj);
+        remove(gobj) {
+            const idx = this.indexOf(gobj);
             if (idx !== -1) {
                 this._children.splice(idx, 1);
                 gobj.free();
@@ -224,12 +222,12 @@
             return idx;
         },
 
-        toJSON: function() {
+        toJSON() {
             return this._children.map(function(elem) {
                 return elem.toJSON()
             })
         },
-        fromJSON: function(json, map) {
+        fromJSON(json, map) {
             json.forEach(function(child) {
                 this.addNew().fromJSON(child, map);
             }, this);
@@ -741,7 +739,7 @@
                 GraphFactory[factory.name] = factory;
                 return factory;
             },
-            getByConfig: function(config) {
+            getFactoryByConfig: function(config) {
                 return GraphFactory[GraphFactory._configToName(config || {})];
             },
             getFactoryByName: function(fullname) {

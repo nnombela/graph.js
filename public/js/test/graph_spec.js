@@ -1,41 +1,46 @@
 
 var G = this.G;
 
-describe("G Types", function() {
+describe("Graph Aspects", function() {
 
-    it("children", function() {
+    it("a Type member has a children and a parent", function() {
         expect(G.Types.Node.children()).toEqual(G.Types.Links);
+        expect(G.Types.Node.parent()).toEqual(G.Types.Nodes);
+    });
+
+    it("a Direction member has a reverse", function() {
+        expect(G.Direction.In.reverse()).toEqual(G.Direction.Out);
+    });
+
+    it("a Duality member has a dual", function() {
+        expect(G.Duality.Vertex.dual()).toEqual(G.Duality.Edge);
     });
 });
 
 
-describe("G Default Factory", function() {
-    var factory = G.getByConfig();
+describe("Graph Default Factory", function() {
+    const defaultFactory = G.getFactoryByConfig();
 
-    it("Factory name", function() {
-        expect(factory.name).toBe("default");
+    it("Default Factory has 'default' name", function() {
+        expect(defaultFactory.name).toBe("default");
     });
 
 });
 
 describe("Default Graph", function() {
-    var factory = G.getByConfig();
-
-    var graph = factory.createGraph('graph1');
-
-    var node1 = factory.createNode('node1');
-    var node2 = new factory.Node('node2');
-
+    const factory = G.getFactoryByConfig();
+    const graph = factory.createGraph('graph1');
+    const node1 = factory.createNode('node1');
+    const node2 = new factory.Node('node2');
     graph.nodes().add(node1).add(node2).addNew();
 
-    var link1 = factory.createLink('link1');
-
+    const link1 = factory.createLink('link1');
     node1.links().add(link1);
-    var link2 = node2.links().addNew();
 
+    const link2 = node2.links().addNew();
     link1.bind(link2);
 
-    it("nodes", function() {
+    it("Graph nodes contains nodes", function() {
         var nodes = graph.nodes();
 
         expect(nodes.size()).toBe(3);
@@ -43,7 +48,7 @@ describe("Default Graph", function() {
         expect(nodes.contains(node2)).toBe(true);
     });
 
-    it("links", function() {
+    it("Graph links contains links and are bound", function() {
         var links1 = node1.links();
         var links2 = node2.links();
 
