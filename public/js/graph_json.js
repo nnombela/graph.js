@@ -5,18 +5,19 @@
     var json = {};
 
     json.stringify = function(gobj, replacer, space) {
-        var result =  {};
-        result.factory = gobj.factory().name;
-        result.type = gobj.type().val();
-        result.value = gobj;
-
-        return JSON.stringify(result, replacer, space || "  ");
-    };
+        return JSON.stringify(
+            {
+                factoryName: gobj.factory().name,
+                type: gobj.type().val(),
+                value: gobj
+            },
+            replacer,
+            space || '  ')
+    }
 
     json.parse = function(str, reviver) {
         var obj = JSON.parse(str, reviver);
-
-        var factory = G.getFactoryByName(obj.factory);
+        var factory = G.getFactoryByName(obj.factoryName);
         var gobj = factory.create(G.Types[obj.type]);
 
         gobj.fromJSON(obj.value, Object.create(null));

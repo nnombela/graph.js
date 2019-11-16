@@ -5,9 +5,13 @@
 (function(root) {
     //----------   FP
 
-    var toString = Object.prototype.toString,
-        hasOwnProperty = Object.prototype.hasOwnProperty,
-        slice = Array.prototype.slice;
+    var toString = Object.prototype.toString;
+    var hasOwnProperty = Object.prototype.hasOwnProperty;
+    var slice = Array.prototype.slice;
+
+    function isObject(obj) {
+        return obj === Object(obj);
+    }
 
     function isArray(o) {
         return toString.call(o) === '[object Array]';
@@ -21,9 +25,7 @@
         return value;
     }
 
-    function extend(dst, src, extendingFn) {
-        extendingFn = extendingFn || identity;
-
+    function _extend(extendingFn, dst, src) {
         for (var prop in src) {
             if (hasOwnProperty.call(src, prop)) {
                 dst[prop] = extendingFn.call(dst[prop], src[prop])
@@ -32,28 +34,25 @@
         return dst;
     }
 
-    // recursive extend, use extend function of caller or identity function otherwise
-    function rExtendingFn(value) {
-        return this && isFunction(this.extend) ? this.extend(value) : value;
+    function extend(dst, src) {
+        return _extend(identity, dst, src)
     }
 
+    // recursive extend
     function rExtend(dst, src) {
-        return extend(dst, src, rExtendingFn)
+        return _extend(function (value) {
+            return this && isFunction(this.extend) ? this.extend(value) : value;
+        }, dst, src)
     }
 
-    function asArray(result) {
-        return result === undefined || isArray(result) ? result : [result];
-    }
-
-    function compose(func1, func2, proto) {
-        var isFunction1 = isFunction(func1), isFunction2 = isFunction(func2);
+    function compose(func1, func2, __proto__) {
         var result = function() {
-            // if func1 returns undefined then use same arguments (identity function)
-            var result = isFunction1 ? func1.apply(this, arguments) : slice.call(arguments);
-            return isFunction2 ? func2.apply(this, asArray(result) || arguments) : result;
+            var result1 = func1.apply(this, arguments);
+            // Treats void functions that returns undefined as they were identity functions
+            return func2.apply(this, result1 === undefined ? arguments : [result1]);
         };
-        if (proto) {
-            result.__proto__ = proto;  // yes functions are also objects and have a prototype
+        if (__proto__) {
+            result.__proto__ = __proto__;  // functions are also objects and might have a prototype
         }
         return result;
     }
@@ -120,7 +119,7 @@
                 extend(Child, props.$statics)
             }
             if (props.$mixins) { // special $mixins property
-                asArray(props.$mixins).forEach(function(mixinProps) { Child.mixin(mixinProps) })
+                props.$mixins.forEach(function(mixinProps) { Child.mixin(mixinProps) })
             }
             return Child.mixin(props)
         }
@@ -128,8 +127,8 @@
 
     var Extensible = extend(function() {}, {
         extend: function(obj) {
-            // in case any is a function then compose otherwise create new object
-            var instance = isFunction(this) || isFunction(obj) ? compose(this, obj, this) : Object.create(this);
+            // in case both are functions then compose otherwise create new object
+            var instance = isFunction(this) && isFunction(obj) ? compose(this, obj, this) : Object.create(this);
             return rExtend(instance, obj);
         },
         create: function(obj) {
@@ -139,7 +138,7 @@
 
     var Enum = extend(function() {}, {
         create: function(values, props) {
-            props = extend(props || {}, {
+            var extendedProps = extend(props || {}, {
                 $constructor: function(value, index) {
                     this.value = value;
                     this.index = index;
@@ -158,7 +157,7 @@
                 }
             });
 
-            var instance = Class.extend(props);
+            var instance = Class.extend(extendedProps);
             instance.members = values.map(function(elem, idx) {
                 return instance[elem] = new instance(elem, idx)
             });
