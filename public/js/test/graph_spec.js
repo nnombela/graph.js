@@ -1,3 +1,6 @@
+
+var G = this.G;
+
 describe("G Types", function() {
 
     it("children", function() {

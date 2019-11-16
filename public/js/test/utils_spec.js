@@ -1,4 +1,6 @@
 
+var OOP = this.OOP;
+
 describe("Parent - Child", function() {
     var log = [];
 
