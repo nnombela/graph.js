@@ -170,9 +170,7 @@
         },
 
         free() {
-            return this.forEach(function(child) {
-                this.remove(child);
-            })
+            return this.forEach(child => this.remove(child))
         },
 
         get(index) {
@@ -223,19 +221,15 @@
         },
 
         toJSON() {
-            return this._children.map(function(elem) {
-                return elem.toJSON()
-            })
+            return this._children.map(elem => elem.toJSON())
         },
         fromJSON(json, map) {
-            json.forEach(function(child) {
-                this.addNew().fromJSON(child, map);
-            }, this);
+            json.forEach(child => this.addNew().fromJSON(child, map));
         }
     });
 
 
-    var DuoGraphContainer = GraphObject.extend({
+    const DuoGraphContainer = GraphObject.extend({
         $mixins: [Iterable, Accessible],
 
         Container: GraphContainer,
@@ -251,12 +245,12 @@
             return this[enumerator ? enumerator.idx() : 0];
         },
         get: function(index) {
-            var size0 = this[0].size();
+            const size0 = this[0].size();
             return index < size0? this[0].get(index) : this[1].get(index - size0);
         },
         indexOf: function(gobj) {
-            var indexOf0 = this[0].indexOf(gobj);
-            return indexOf0 === -1? indexOf0 : this[1].indexOf(gobj);
+            const indexOf0 = this[0].indexOf(gobj);
+            return indexOf0 === -1 ? indexOf0 : this[1].indexOf(gobj);
         },
         forEach: function(func) {
             this[0].forEach(func, this);
@@ -264,8 +258,8 @@
             return this;
         },
         find: function(func) {
-            var result = this[0].find(func, this);
-            return result? result : this[1].find(func, this);
+            const find0 = this[0].find(func, this);
+            return find0 ? find0 : this[1].find(func, this);
         },
         size: function() {
             return this[0].size() + this[1].size();
@@ -287,7 +281,7 @@
             this[1].free();
         },
         toJSON: function() {
-            var json = Object.create(null);
+            const json = Object.create(null);
             json[this.names[0]] = this[0].toJSON();
             json[this.names[1]] = this[1].toJSON();
             return json;
@@ -298,11 +292,12 @@
         }
     });
 
-    var MLGraphObject = GraphObject.extend({
+    const MultilevelGraphObject = GraphObject.extend({
         initialize: function(owner) {
-            this.link = this.factory().createLink(undefined, owner);
-            this.node = this.factory().createNode(undefined, owner);
-            this.graph = this.factory().createGraph(undefined, owner);
+            const factory = this.factory();
+            this.link = factory.createLink(undefined, owner);
+            this.node = factory.createNode(undefined, owner);
+            this.graph = factory.createGraph(undefined, owner);
         },
         free: function() {
             this.link.free();
@@ -311,151 +306,145 @@
         }
     });
 
-    var MLGraphContainer = GraphContainer.extend({
+    const MultilevelGraphContainer = GraphContainer.extend({
         initialize: function(owner) {
-            this.links = this.factory().createLinks();
-            this.nodes = this.factory().createNodes();
-            this.graphs = this.factory().createGraphs();
+            const factory = this.factory();
+            this.links = factory.createLinks();
+            this.nodes = factory.createNodes();
+            this.graphs = factory.createGraphs();
         },
         free: function(child) {
             this.links.free(child);
             this.nodes.free(child);
             this.graphs.free(child);
         },
-
-
         add: function(child) {
             this.links.add(child.link, this);
             this.nodes.add(child.node, this);
             this.graphs.add(child.graph, this);
-
             return this.$super('add', child);
         },
         remove: function(child) {
             this.links.remove(child.link, this);
             this.nodes.remove(child.node, this);
             this.graphs.remove(child.graph, this);
-
             return this.$super('remove', child);
         }
     });
 
 // ---- Link
 
-    var Link = GraphObject.extend({
-        initialize: function() {
+    const Link = GraphObject.extend({
+        initialize() {
             this._pair = null;
         },
-
-        type: function() {
+        type() {
             return Types.Link;
         },
         checkCanBeBound: OOP.Extensible.create(function(pair) {
             if (pair.from() === null) {
-                throw new Error(pair + ' has to be belong to a node');
+                throw new Error('Link ' + pair + ' has to be belong to a node');
             }
         }),
-        bind: function(pair) {
+        bind(pair) {
             this.checkCanBeBound(pair);
             this._bind('_pair', pair);
         },
-        unbind: function() {
+        unbind() {
             this._unbind('_pair')
         },
-        from: function() {
+        from() {
             return this.belongsTo(Types.Node);
         },
-        to: function() {
+        to() {
             return this._pair ? this._pair.from() : null;
         },
-        pair: function() {
+        pair() {
             return this._pair;
         },
-        toJSON: function(json) {
+        toJSON(json) {
             return this._toJsonBind(json, 'pair');
         },
-        fromJSON: function(json, map) {
+        fromJSON(json, map) {
             this._fromJsonBound(json, map, 'pair');
         },
-        free: function() {
+        free() {
             this.unbind();
+            return this.$super('free');
         }
     });
 
 // ----- Link $mixins
 
-    var LinkDirected = {
-        config: {directed: true},
+    const LinkDirected = {
+        config: { directed: true },
 
-        checkCanBeBound: function(pair) {
+        checkCanBeBound(pair) {
             if (this.direction().reverse() !== pair.direction()) {
                 throw new Error('Incorrect direction: ' + pair.direction());
             }
         },
-        reverse: function () {
-            var node = this.from();
-            return node ? node
-                .links(this.direction().reverse())
-                .find(function (link) {
-                    return link.from() == node
-                })
+        reverse() {
+            const node = this.from()
+            return node ?
+                node.links(this.direction().reverse()).find(link => link.from() === node)
                 : null
         },
-        direction: function() {
+        direction() {
             return this.belongsTo().direction();
         }
     };
 
-    var LinkMultilevel = {
+    const LinkMultilevel = {
         config: { multilevel: true },
 
-        initialize: function(owner, multilevel) {
+        initialize(owner, multilevel) {
             this._multilevel = multilevel;
         },
-        multilevel: function () {
+        multilevel() {
             return this._multilevel;
         },
-        checkCanBeBound: function (pair) {
+        checkCanBeBound(pair) {
             if (!pair.from().inverse().links().empty()) {
                 throw new Error(pair + ' can not be multilevel bound');
             }
         },
-        inverse: function() {
-            var inverseNode = this.from().inverse(); // this.node().multilevel().link.to()
+        inverse() {
+            const inverseNode = this.from().inverse(); // this.node().multilevel().link.to()
             return inverseNode ? inverseNode.links().get(this.index()) : null;
         },
 
-        toJSON: function(json) {
+        toJSON(json) {
             json.multilevelId = this._multilevel.id
         },
-        fromJSON: function(json, map) {
+        fromJSON(json, map) {
             this._multilevel = map[json.multilevelId];
         }
     };
 
 // -------------- Links $mixins
 
-    var LinksDirected = {
-        config: {directed: true},
+    const LinksDirected = {
+        config: { directed: true },
 
-        names: Direction.values,
+        names: Direction.members,
 
-        reverse: function() {
+        reverse() {
             return this.belongsTo().links(this.direction().reverse());
         },
-        direction: function() {
+        direction() {
             return this.belongsTo().direction(this);
         }
     };
 
-    var LinksMultilevel = {
+    const LinksMultilevel = {
         config: { multilevel: true },
 
-        inverse: function(direction) {
+        inverse(direction) {
             return this._owner.inverse().links(direction);
         },
 
-        add: function(link, downNode) {
+        add(link, downNode) {
             this.$super("add", link);
             if (downNode) {
                 link.bindDownNode(downNode);
@@ -469,27 +458,27 @@
 
 // --------------- Node
 
-    var Node = GraphObject.extend({
-        initialize: function() {
+    const Node = GraphObject.extend({
+        initialize() {
             this._links = this.factory().createLinks(undefined, this);
         },
-        type: function() {
+        type() {
             return Types.Node;
         },
-        graph: function() {
-            return this._owner._owner;
+        graph() {
+            return this._owner ? this._owner._owner : undefined;
         },
-        links: function() {
+        links() {
             return this._links;
         },
-        toJSON: function(json) {
+        toJSON(json) {
             json.links = this.links().toJSON();
             return json
         },
-        fromJSON: function(json, map) {
+        fromJSON(json, map) {
             this.links().fromJSON(json.links, map);
         },
-        free: function() {
+        free() {
             this.links().free();
             return this.$super('free');
         }
@@ -497,17 +486,17 @@
 
 // ----------- Node $mixins
 
-    var NodeDirected = {
-        config: {directed: true},
+    const NodeDirected = {
+        config: { directed: true },
 
-        links: function(direction) {
-            return direction? this._links.container(direction) : this._links;
+        links(direction) {
+            return direction ? this._links.container(direction) : this._links;
         },
-        direction: function(links) {
-            return this._links[0] === links? Direction['In'] : this._links[1] === links? Direction['Out'] : undefined;
+        direction(links) {
+            return this._links[0] === links ? Direction.In : this._links[1] === links ? Direction.Out : undefined;
         },
         indexOf: function(links) {
-            var direction = this.direction(links);
+            const direction = this.direction(links);
             return direction? direction : -1;
         }
     };
