@@ -7,7 +7,7 @@
             return JSON.stringify(
                 {
                     factoryName: gobj.factory().name,
-                    type: gobj.type().val(),
+                    type: gobj.type().name(),
                     value: gobj
                 },
                 replacer, space || '  ')

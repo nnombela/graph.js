@@ -76,7 +76,7 @@ describe("Point - Circle", function() {
         }
     });
 
-    var Colors = OOP.Enum.create(['White', 'Black'], {
+    var Colors = OOP.Enum.create({White : 'white', Black : 'black'}, {
         reverse: function() {
             return Colors.members[(this.idx() + 1) % 2];
         }
@@ -99,7 +99,7 @@ describe("Point - Circle", function() {
             this.radius = radius;
         },
         toString: function() {
-            return this.$super('toString') + ':' + this.radius + ' in ' + this.color.val();
+            return this.$super('toString') + ':' + this.radius + ' in ' + this.color;
         }
     });
 
@@ -112,7 +112,8 @@ describe("Point - Circle", function() {
 
     it("has black and white possible colors", function() {
         expect(Colors.members).toEqual([Colors.White, Colors.Black]);
-        expect(Colors.values).toEqual(['White', 'Black']);
+        expect(Colors.keys()).toEqual(['White', 'Black']);
+        expect(Colors.values()).toEqual(['white', 'black']);
     });
 
 
@@ -126,7 +127,7 @@ describe("Point - Circle", function() {
         var circle = Circle.create(20, 20, 30);
 
         expect(circle.color.reverse()).toEqual(Colors.Black);
-        expect(circle.toString()).toBe("(20, 20):30 in White");
+        expect(circle.toString()).toBe("(20, 20):30 in white");
     })
 
 

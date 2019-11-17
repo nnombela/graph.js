@@ -3,22 +3,28 @@
 //  Graph library
 (function(root, OOP, FP) {
     // Enums
-    const Types = OOP.Enum.create(['Graphs', 'Graph', 'Nodes', 'Node', 'Links', 'Link'], {
-        children() {
-            return Types.members[this.idx() + 1];
+    const Types = OOP.Enum.create({
+        Graphs: 'graphs', Graph: 'graph', Nodes: 'nodes', Node: 'node', Links: 'links', Link: 'link',
+    }, {
+        children () {
+            return Types.members[this.idx() + 1]
         },
-        parent() {
-            return Types.members[this.idx() - 1];
-        }
-    });
+        parent () {
+            return Types.members[this.idx() - 1]
+        },
+    })
 
-    const Direction = OOP.Enum.create(['In', 'Out'], {
+    const Direction = OOP.Enum.create({
+        In: 'in', Out: 'out'
+    }, {
         reverse() {
             return Direction.members[(this.idx() + 1) % 2];
         }
     });
 
-    const Duality =  OOP.Enum.create(['Vertex', 'Edge'], {
+    const Duality =  OOP.Enum.create({
+        Vertex: 'Vertex', Edge: 'Edge'
+    }, {
         dual() {
             return Duality.members[(this.idx() + 1) % 2];
         }
@@ -427,7 +433,7 @@
     const LinksDirected = {
         config: { directed: true },
 
-        names: Direction.members,
+        names: Direction.values(),
 
         reverse() {
             return this.belongsTo().links(this.direction().reverse());
@@ -571,7 +577,7 @@
     var NodesDual = {
         config: {dual: true},
 
-        names: Duality.values,
+        names: Duality.values(),
 
         dual: function() {
             return this._owner.nodes(this.duality().dual());
@@ -640,7 +646,7 @@
             return duality? this._nodes.container(duality) : this._nodes;
         },
         duality: function(nodes) {
-            return this._nodes[0] === nodes? Duality.hedge : this._nodes[1] === nodes? Duality.hvert : undefined;
+            return this._nodes[0] === nodes? Duality.Edge : this._nodes[1] === nodes? Duality.Vertex : undefined;
         },
         indexOf: function(nodes) {
             var duality = this.duality(nodes);
@@ -690,7 +696,7 @@
 
     var Graphs = GraphContainer.extend({
         type: function() {
-            return Types['graphs'];
+            return Types.Graph
         }
     });
 
@@ -719,9 +725,7 @@
         $statics: {
             VERSION: '0.1',
 
-            Types: Types,
-            Direction: Direction,
-            Duality: Duality,
+            Types, Direction, Duality,
 
             register: function(config, props) {
                 var factory = new GraphFactory(config, props);
@@ -755,7 +759,7 @@
         },
 
         create: function(type, id, owner) {
-            return new this[type.val()](id, owner);
+            return new this[type.name()](id, owner);
         },
 
         createLink: function(id, owner) {

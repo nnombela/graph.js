@@ -137,10 +137,11 @@
     });
 
     var Enum = extend(function() {}, {
-        create: function(values, props) {
+        create: function(enumObject, props) {
             var extendedProps = extend(props || {}, {
-                $constructor: function(value, index) {
-                    this.value = value;
+                $constructor: function(entry, index) {
+                    this.key = entry[0];
+                    this.value = entry[1];
                     this.index = index;
                 },
                 val: function() {
@@ -149,17 +150,31 @@
                 idx: function() {
                     return this.index;
                 },
+                name: function() {
+                    return this.key;
+                },
                 toString: function() {
                     return this.value;
                 },
                 $statics: {
-                    values: values
+                    object() {
+                        return enumObject
+                    },
+                    entries() {
+                        return Object.entries(enumObject);
+                    },
+                    keys() {
+                        return Object.keys(enumObject)
+                    },
+                    values() {
+                        return Object.values(enumObject)
+                    }
                 }
             });
 
             var instance = Class.extend(extendedProps);
-            instance.members = values.map(function(elem, idx) {
-                return instance[elem] = new instance(elem, idx)
+            instance.members = instance.entries().map(function(entry, idx) {
+                return instance[entry[0]] = new instance(entry, idx)
             });
             return instance;
         }
