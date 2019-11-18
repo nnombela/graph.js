@@ -7,7 +7,7 @@
             return JSON.stringify(
                 {
                     factoryName: gobj.factory().name,
-                    type: gobj.type().name(),
+                    typeName: gobj.type().name,
                     value: gobj
                 },
                 replacer, space || '  ')
@@ -15,7 +15,7 @@
         parse (str, reviver) {
             const obj = JSON.parse(str, reviver);
             const factory = G.getFactoryByName(obj.factoryName);
-            const gobj = factory.create(G.Types[obj.type]);
+            const gobj = factory.create(G.Types[obj.typeName]);
             gobj.fromJSON(obj.value, Object.create(null));
             return gobj;
         }

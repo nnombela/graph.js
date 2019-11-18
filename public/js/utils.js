@@ -97,8 +97,12 @@
         return dst;
     }
 
-    function uniqueId() {
-        return (Math.random().toString(36) + '00000000000000000').substr(2, 10) + '-' + (new Date()).getTime().toString(36);
+    function generateUuidV4() {
+        return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => {
+            const r = window ? window.crypto.getRandomValues(new Uint8Array(1))[0] : Math.random() * 256 | 0;
+            const v = c ^ (r & (15 >> (c / 4)));
+            return v.toString(16)
+        })
     }
 
     
@@ -137,44 +141,22 @@
     });
 
     var Enum = extend(function() {}, {
-        create: function(enumObject, props) {
+        create: function(names, props) {
             var extendedProps = extend(props || {}, {
-                $constructor: function(entry, index) {
-                    this.key = entry[0];
-                    this.value = entry[1];
-                    this.index = index;
-                },
-                val: function() {
-                    return this.value;
-                },
-                idx: function() {
-                    return this.index;
-                },
-                name: function() {
-                    return this.key;
+                $constructor: function(name, ordinal) {
+                    this.name = name;
+                    this.ordinal = ordinal;
                 },
                 toString: function() {
-                    return this.value;
+                    return this.name;
                 },
                 $statics: {
-                    object() {
-                        return enumObject
-                    },
-                    entries() {
-                        return Object.entries(enumObject);
-                    },
-                    keys() {
-                        return Object.keys(enumObject)
-                    },
-                    values() {
-                        return Object.values(enumObject)
-                    }
+                    names
                 }
             });
-
             var instance = Class.extend(extendedProps);
-            instance.members = instance.entries().map(function(entry, idx) {
-                return instance[entry[0]] = new instance(entry, idx)
+            instance.members = names.map(function(name, ordinal) {
+                return instance[name] = new instance(name, ordinal)
             });
             return instance;
         }
@@ -196,7 +178,7 @@
             Class: Class,
             Enum: Enum,
             Extensible: Extensible,
-            uniqueId: uniqueId
+            uniqueId: generateUuidV4
         }
     });
 })(this);

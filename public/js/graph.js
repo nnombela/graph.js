@@ -3,30 +3,24 @@
 //  Graph library
 (function(root, OOP, FP) {
     // Enums
-    const Types = OOP.Enum.create({
-        Graphs: 'graphs', Graph: 'graph', Nodes: 'nodes', Node: 'node', Links: 'links', Link: 'link',
-    }, {
+    const Types = OOP.Enum.create(['Graphs', 'Graph', 'Nodes', 'Node', 'Links', 'Link'], {
         children () {
-            return Types.members[this.idx() + 1]
+            return Types.members[this.ordinal + 1]
         },
         parent () {
-            return Types.members[this.idx() - 1]
+            return Types.members[this.ordinal - 1]
         },
     })
 
-    const Direction = OOP.Enum.create({
-        In: 'in', Out: 'out'
-    }, {
+    const Direction = OOP.Enum.create(['In', 'Out'], {
         reverse() {
-            return Direction.members[(this.idx() + 1) % 2];
+            return Direction.members[(this.ordinal + 1) % 2];
         }
     });
 
-    const Duality =  OOP.Enum.create({
-        Vertex: 'Vertex', Edge: 'Edge'
-    }, {
+    const Duality =  OOP.Enum.create(['Vertex', 'Edge'], {
         dual() {
-            return Duality.members[(this.idx() + 1) % 2];
+            return Duality.members[(this.ordinal + 1) % 2];
         }
     });
 
@@ -65,7 +59,7 @@
             return GraphFactory.getFactoryByConfig(this.config);
         },
         toString() {
-            return this.type().val() + '#' + this.id;
+            return this.type() + '#' + this.id;
         },
         index() {
             return this._owner ? this._owner.indexOf(this) : -1;
@@ -248,7 +242,7 @@
         },
 
         container: function(enumerator) {
-            return this[enumerator ? enumerator.idx() : 0];
+            return this[enumerator !== undefined ? enumerator.ordinal !== undefined ? enumerator.ordinal : enumerator : 0];
         },
         get: function(index) {
             const size0 = this[0].size();
@@ -433,7 +427,7 @@
     const LinksDirected = {
         config: { directed: true },
 
-        names: Direction.values(),
+        names: Direction.names,
 
         reverse() {
             return this.belongsTo().links(this.direction().reverse());
@@ -577,7 +571,7 @@
     var NodesDual = {
         config: {dual: true},
 
-        names: Duality.values(),
+        names: Duality.names,
 
         dual: function() {
             return this._owner.nodes(this.duality().dual());
@@ -759,7 +753,7 @@
         },
 
         create: function(type, id, owner) {
-            return new this[type.name()](id, owner);
+            return new this[type.name](id, owner);
         },
 
         createLink: function(id, owner) {
