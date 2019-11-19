@@ -27,11 +27,12 @@
     // Graph objects
     const GraphObject = OOP.Class.extend({
         $statics: {
-            Types, Direction, Duality
+            Types, Direction, Duality,
+            UNIQUE_ID_PATTERN: 'g000-100000000000' // set this to undefined to generate uuidv4
         },
 
         $constructor(id, owner) {
-            this.id = id || OOP.uniqueId();
+            this.id = id || OOP.uniqueId(GraphObject.UNIQUE_ID_PATTERN);
             this.initialize(owner);
         },
 
@@ -45,11 +46,12 @@
         }),
 
         free: OOP.Extensible.create(function() {
-            if (this._owner) {
-                let owner = this._owner;
-                this._owner = null;
-                owner.free(this);
+            if (!this._owner) {
+                return // nothing to do here
             }
+            const currentOwner = this._owner;
+            this._owner = null;
+            currentOwner.free(this);
         }),
 
         type() {
@@ -168,11 +170,9 @@
         initialize() {
             this._children = [];
         },
-
         free() {
-            return this.forEach(child => this.remove(child))
+            this.forEach(child => this.remove(child))
         },
-
         get(index) {
             return this._children[index];
         },
@@ -195,13 +195,12 @@
             return this.indexOf(gobj) !== -1;
         },
         add(gobj) {
-            if (gobj.type() === this.type().children() ) {
-                gobj.initialize(this);
-                this._children.push(gobj);
-                return this;
-            } else {
+            if (gobj.type() !== this.type().children()) {
                 throw new Error('This graph object ' + gobj + ' could not be added to ' + this + ' graph container');
             }
+            gobj.initialize(this);
+            this._children.push(gobj);
+            return this;
         },
         newChild(id) {
             return this.factory().create(this.type().children(), id);
@@ -231,9 +230,7 @@
 
     const DuoGraphContainer = GraphObject.extend({
         $mixins: [Iterable, Accessible],
-
         Container: GraphContainer,
-
         names: ['0', '1'],
 
         initialize: function(owner) {
@@ -246,26 +243,26 @@
         },
         get: function(index) {
             const size0 = this[0].size();
-            return index < size0? this[0].get(index) : this[1].get(index - size0);
+            return index < size0 ? this[0].get(index) : this[1].get(index - size0);
         },
         indexOf: function(gobj) {
             const indexOf0 = this[0].indexOf(gobj);
             return indexOf0 === -1 ? indexOf0 : this[1].indexOf(gobj);
         },
-        forEach: function(func) {
-            this[0].forEach(func, this);
-            this[1].forEach(func, this);
+        forEach: function(func, thisArg) {
+            this[0].forEach(func, thisArg || this);
+            this[1].forEach(func, thisArg || this);
             return this;
         },
-        find: function(func) {
-            const find0 = this[0].find(func, this);
-            return find0 ? find0 : this[1].find(func, this);
+        find: function(func, thisArg) {
+            const find0 = this[0].find(func, thisArg || this);
+            return find0 ? find0 : this[1].find(func, thisArg || this);
         },
         size: function() {
             return this[0].size() + this[1].size();
         },
         empty: function() {
-            return this.size() === 0;
+            return this[0].empty() && this[1].empty();
         },
         add: function(gobj, enumerator) {
             return this.container(enumerator).add(gobj);
@@ -274,7 +271,8 @@
             return this.container(enumerator).addNew(id);
         },
         remove: function(gobj) {
-            return gobj._owner.remove(gobj);
+            const idx = this[0].remove(gobj)
+            return idx !== -1 ? idx : this[1].remove(gobj);
         },
         free: function() {
             this[0].free();
@@ -293,42 +291,81 @@
     });
 
     const MultilevelGraphObject = GraphObject.extend({
-        initialize: function(owner) {
-            const factory = this.factory();
-            this.link = factory.createLink(undefined, owner);
-            this.node = factory.createNode(undefined, owner);
-            this.graph = factory.createGraph(undefined, owner);
-        },
         free: function() {
-            this.link.free();
-            this.node.free();
-            this.graph.free();
+            if (this._link) {
+                this._link.free();
+            }
+            if (this._node) {
+                this._node.free();
+            }
+            if (this._graph) {
+                this._graph.free();
+            }
+        },
+        link() {
+            if (!this._link) {
+                this._link = this.factory().createLink(this.id, this._owner, this)
+            }
+            return this._link;
+        },
+        node() {
+            if (!this._node) {
+                this._node = this.factory().createNode(this.id, this._owner, this)
+            }
+            return this._node;
+        },
+        graph() {
+            if (!this._graph) {
+                this._graph = this.factory().createGraph(this.id, this._owner, this)
+            }
+            return this._graph;
+        },
+        hasLink() {
+            return this._link;
+        },
+        hasNode() {
+            return this._node;
+        },
+        hasGraph() {
+            return this._graph;
         }
     });
 
     const MultilevelGraphContainer = GraphContainer.extend({
-        initialize: function(owner) {
-            const factory = this.factory();
-            this.links = factory.createLinks();
-            this.nodes = factory.createNodes();
-            this.graphs = factory.createGraphs();
+        free() {
+            if (this._links) {
+                this._links.free();
+            }
+            if (this._nodes) {
+                this._nodes.free();
+            }
+            if (this._graph){
+                this._graphs.free();
+            }
         },
-        free: function(child) {
-            this.links.free(child);
-            this.nodes.free(child);
-            this.graphs.free(child);
+        links() {
+            if (!this._links) {
+                this._links = this.factory().createLinks(this.id, this._owner, this)
+            }
         },
-        add: function(child) {
-            this.links.add(child.link, this);
-            this.nodes.add(child.node, this);
-            this.graphs.add(child.graph, this);
-            return this.$super('add', child);
+        nodes() {
+            if (!this._nodes) {
+                this._nodes = this.factory().createNodes(this.id, this._owner, this)
+            }
         },
-        remove: function(child) {
-            this.links.remove(child.link, this);
-            this.nodes.remove(child.node, this);
-            this.graphs.remove(child.graph, this);
-            return this.$super('remove', child);
+        graphs() {
+            if (!this._graphs) {
+                this._graphs = this.factory().createGraphs(this.id, this._owner, this)
+            }
+        },
+        hasLinks() {
+            return this._links;
+        },
+        hasNodes() {
+            return this._nodes;
+        },
+        hasGraphs() {
+            return this._graphs;
         }
     });
 
@@ -370,7 +407,6 @@
         },
         free() {
             this.unbind();
-            return this.$super('free');
         }
     });
 
@@ -398,7 +434,7 @@
     const LinkMultilevel = {
         config: { multilevel: true },
 
-        initialize(owner, multilevel) {
+        initialize(id, owner, multilevel) {
             this._multilevel = multilevel;
         },
         multilevel() {
@@ -427,7 +463,7 @@
     const LinksDirected = {
         config: { directed: true },
 
-        names: Direction.names,
+        names: ['ins', 'outs'],
 
         reverse() {
             return this.belongsTo().links(this.direction().reverse());
@@ -480,7 +516,6 @@
         },
         free() {
             this.links().free();
-            return this.$super('free');
         }
     });
 
@@ -501,21 +536,21 @@
         }
     };
 
-    var NodeMultilevel = {
+    const NodeMultilevel = {
         config: { multilevel: true },
 
-        initialize: function() {
+        initialize() {
             this._inverse = null;
             this._downGraph = null;
             this._upLink = null;
         },
-        inverse: function() {
+        inverse() {
             return this._inverse;
         },
-        downGraph: function() {
+        downGraph() {
             return this._downGraph;
         },
-        upLink: function() {
+        upLink() {
             return this._upLink;
         },
         bindInverse: function(inverse) {
@@ -557,10 +592,10 @@
         }
     };
 
-    var NodeDual = {
+    const NodeDual = {
         config: {dual: true},
 
-        duality: function() {
+        duality() {
             return this._owner.duality();
         }
     };
@@ -571,7 +606,7 @@
     var NodesDual = {
         config: {dual: true},
 
-        names: Duality.names,
+        names: ['vertices', 'edges'],
 
         dual: function() {
             return this._owner.nodes(this.duality().dual());

@@ -38,17 +38,17 @@
         return _extend(identity, dst, src)
     }
 
-    // recursive extend
+    // Recursive extend, will look for object that has the extend method to recursively extend
     function rExtend(dst, src) {
         return _extend(function (value) {
             return this && isFunction(this.extend) ? this.extend(value) : value;
         }, dst, src)
     }
 
+    // a slightly different compose function, that treats void function that returns undefined as rather identity functions
     function compose(func1, func2, __proto__) {
         var result = function() {
             var result1 = func1.apply(this, arguments);
-            // Treats void functions that returns undefined as they were identity functions
             return func2.apply(this, result1 === undefined ? arguments : [result1]);
         };
         if (__proto__) {
@@ -57,6 +57,7 @@
         return result;
     }
 
+    // inheritance is implement via inherit function, I wont migrate to es6 classes anytime soon
     function inherits(Parent, Constructor) {
         Constructor = Constructor || Parent;
 
@@ -91,15 +92,18 @@
         return dst;
     }
 
-    // recursive mixin
+    // Recursive mixin
     function rMixin(dst, props) {
         rExtend(dst.prototype, props);
         return dst;
     }
 
-    function generateUuidV4() {
-        return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => {
-            const r = window ? window.crypto.getRandomValues(new Uint8Array(1))[0] : Math.random() * 256 | 0;
+    //
+    const uuidV4Pattern = '10000000-1000-4000-8000-100000000000'
+
+    function uniqueId(pattern) {
+        return (pattern || uuidV4Pattern).replace(/[018]/g, c => {
+            const r = window && window.crypto ? window.crypto.getRandomValues(new Uint8Array(1))[0] : Math.random() * 256 | 0;
             const v = c ^ (r & (15 >> (c / 4)));
             return v.toString(16)
         })
@@ -129,6 +133,7 @@
         }
     });
 
+    // Extensible objects implement extend method that uses prototypical inheritance on objects and compose on functions (which are also objects)
     var Extensible = extend(function() {}, {
         extend: function(obj) {
             // in case both are functions then compose otherwise create new object
@@ -178,7 +183,7 @@
             Class: Class,
             Enum: Enum,
             Extensible: Extensible,
-            uniqueId: generateUuidV4
+            uniqueId: uniqueId
         }
     });
 })(this);
