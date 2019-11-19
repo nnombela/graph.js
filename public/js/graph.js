@@ -4,6 +4,8 @@
 (function(root, OOP, FP) {
     // Enums
     const Types = OOP.Enum.create(['Graphs', 'Graph', 'Nodes', 'Node', 'Links', 'Link'], {
+        // labels
+        Graphs: 'graphs', Graph: 'graph', Nodes: 'nodes', Node: 'node', Links: 'links', Link: 'link',
         children () {
             return Types.members[this.ordinal + 1]
         },
@@ -13,12 +15,16 @@
     })
 
     const Direction = OOP.Enum.create(['In', 'Out'], {
+        // labels
+        In: 'in', Out: 'out',
         reverse() {
             return Direction.members[(this.ordinal + 1) % 2];
         }
     });
 
     const Duality =  OOP.Enum.create(['Vertex', 'Edge'], {
+        // labels
+        Vertex: 'vertex', Edge: 'edge',
         dual() {
             return Duality.members[(this.ordinal + 1) % 2];
         }
@@ -237,9 +243,8 @@
             this[0] = new this.Container(this.names[0] + '#' + this.id, owner);
             this[1] = new this.Container(this.names[1] + '#' + this.id, owner);
         },
-
         container: function(enumerator) {
-            return this[enumerator !== undefined ? enumerator.ordinal !== undefined ? enumerator.ordinal : enumerator : 0];
+            return enumerator !== undefined ? this[enumerator.ordinal !== undefined ? enumerator.ordinal : enumerator] : this;
         },
         get: function(index) {
             const size0 = this[0].size();
@@ -265,10 +270,10 @@
             return this[0].empty() && this[1].empty();
         },
         add: function(gobj, enumerator) {
-            return this.container(enumerator).add(gobj);
+            return this.container(enumerator || 0).add(gobj);
         },
         addNew: function(id, enumerator) {
-            return this.container(enumerator).addNew(id);
+            return this.container(enumerator || 0).addNew(id);
         },
         remove: function(gobj) {
             const idx = this[0].remove(gobj)
@@ -523,10 +528,10 @@
         config: { directed: true },
 
         links(direction) {
-            return direction ? this._links.container(direction) : this._links;
+            return this._links.container(direction);
         },
         direction(links) {
-            return this._links[0] === links ? Direction.In : this._links[1] === links ? Direction.Out : undefined;
+            return this.links(Direction.In) === links ? Direction.In : this.links(Direction.Out) === links ? Direction.Out : undefined;
         },
         indexOf(links) {
             return this.direction(links) || -1;

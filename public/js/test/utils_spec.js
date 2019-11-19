@@ -77,6 +77,8 @@ describe("Point - Circle", function() {
     });
 
     var Colors = OOP.Enum.create(['White', 'Black'], {
+        White: 'white',
+        Black: 'black',
         reverse: function() {
             return Colors.members[(this.ordinal + 1) % 2];
         }
@@ -126,7 +128,7 @@ describe("Point - Circle", function() {
         var circle = Circle.create(20, 20, 30);
 
         expect(circle.color.reverse()).toEqual(Colors.Black);
-        expect(circle.toString()).toBe("(20, 20):30 in White");
+        expect(circle.toString()).toBe("(20, 20):30 in white");
     })
 
 
