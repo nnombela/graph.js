@@ -394,7 +394,7 @@
             return this.belongsTo(Types.Node);
         },
         to() {
-            return this._pair ? this._pair.from() : null;
+            return this._pair &&  this._pair.from()
         },
         pair() {
             return this._pair;
@@ -422,9 +422,7 @@
         },
         reverse() {
             const node = this.from()
-            return node ?
-                node.links(this.direction().reverse()).find(link => link.from() === node)
-                : null
+            return node && node.links(this.direction().reverse()).find(link => link.from() === node)
         },
         direction() {
             return this.belongsTo().direction();
@@ -477,7 +475,7 @@
         config: { multilevel: true },
 
         inverse(direction) {
-            return this._owner.inverse().links(direction);
+            return this.belongsTo().inverse().links(direction);
         },
 
         add(link, downNode) {
@@ -530,9 +528,8 @@
         direction(links) {
             return this._links[0] === links ? Direction.In : this._links[1] === links ? Direction.Out : undefined;
         },
-        indexOf: function(links) {
-            const direction = this.direction(links);
-            return direction? direction : -1;
+        indexOf(links) {
+            return this.direction(links) || -1;
         }
     };
 
@@ -596,7 +593,7 @@
         config: {dual: true},
 
         duality() {
-            return this._owner.duality();
+            return this.belongsTo().duality();
         }
     };
 
@@ -609,10 +606,10 @@
         names: ['vertices', 'edges'],
 
         dual: function() {
-            return this._owner.nodes(this.duality().dual());
+            return this.belongsTo().nodes(this.duality().dual());
         },
         duality: function() {
-            return this._owner.duality(this);
+            return this.belongsTo().duality(this);
         }
     };
 
