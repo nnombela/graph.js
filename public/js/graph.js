@@ -37,9 +37,9 @@
             UNIQUE_ID_PATTERN: 'g000-100000000000' // set this to undefined to generate uuidv4
         },
 
-        $constructor(id, owner) {
+        $constructor(id, ...rest) {
             this.id = id || OOP.uniqueId(GraphObject.UNIQUE_ID_PATTERN);
-            this.initialize(owner);
+            this.initialize.apply(this, rest);
         },
 
         config: OOP.Extensible.create({name: 'default'}),
@@ -309,19 +309,19 @@
         },
         link() {
             if (!this._link) {
-                this._link = this.factory().createLink(this.id, this._owner, this)
+                this._link = this.factory().createLink('link#' + this.id, this._owner && this._owner._links, this)
             }
             return this._link;
         },
         node() {
             if (!this._node) {
-                this._node = this.factory().createNode(this.id, this._owner, this)
+                this._node = this.factory().createNode('node#' + this.id, this._owner && this._owner._nodes, this)
             }
             return this._node;
         },
         graph() {
             if (!this._graph) {
-                this._graph = this.factory().createGraph(this.id, this._owner, this)
+                this._graph = this.factory().createGraph('graph#' + this.id, this._owner && this._owner._graphs, this);
             }
             return this._graph;
         },
@@ -344,23 +344,23 @@
             if (this._nodes) {
                 this._nodes.free();
             }
-            if (this._graph){
+            if (this._graphs) {
                 this._graphs.free();
             }
         },
         links() {
             if (!this._links) {
-                this._links = this.factory().createLinks(this.id, this._owner, this)
+                this._links = this.factory().createLinks('links#' + this.id, this._owner, this)
             }
         },
         nodes() {
             if (!this._nodes) {
-                this._nodes = this.factory().createNodes(this.id, this._owner, this)
+                this._nodes = this.factory().createNodes('nodes#' + this.id, this._owner, this);
             }
         },
         graphs() {
             if (!this._graphs) {
-                this._graphs = this.factory().createGraphs(this.id, this._owner, this)
+                this._graphs = this.factory().createGraphs('graphs#' + this.id, this._owner, this);
             }
         },
         hasLinks() {
@@ -422,12 +422,13 @@
 
         checkCanBeBound(pair) {
             if (this.direction().reverse() !== pair.direction()) {
-                throw new Error('Incorrect direction: ' + pair.direction());
+                throw new Error('Trying to bind using incorrect direction: ' + pair.direction());
             }
         },
         reverse() {
             const node = this.from()
-            return node && node.links(this.direction().reverse()).find(link => link.from() === node)
+            return node && node.links(this.direction().reverse()).
+                find(link => link.from() === node)
         },
         direction() {
             return this.belongsTo().direction();
@@ -482,17 +483,6 @@
         inverse(direction) {
             return this.belongsTo().inverse().links(direction);
         },
-
-        add(link, downNode) {
-            this.$super("add", link);
-            if (downNode) {
-                link.bindDownNode(downNode);
-            } else {
-                var downNodes = this._owner.downGraph().nodes();
-                downNodes.add(downNodes.newChild(), link, undefined);
-            }
-            return link;
-        }
     };
 
 // --------------- Node
@@ -505,7 +495,7 @@
             return Types.Node;
         },
         graph() {
-            return this._owner ? this._owner._owner : undefined;
+            return this.belongsTo(Types.Graph);
         },
         links() {
             return this._links;
@@ -541,61 +531,25 @@
     const NodeMultilevel = {
         config: { multilevel: true },
 
-        initialize() {
-            this._inverse = null;
-            this._downGraph = null;
-            this._upLink = null;
+        initialize(id, owner, multilevel) {
+            this._multilevel = multilevel;
+        },
+        multilevel() {
+            return this._multilevel;
         },
         inverse() {
-            return this._inverse;
+            this.multilevel().link().pair().multilevel().node();
         },
-        downGraph() {
-            return this._downGraph;
+        toJSON(json) {
+            json.multilevelId = this._multilevel.id
         },
-        upLink() {
-            return this._upLink;
-        },
-        bindInverse: function(inverse) {
-            this._bind('_inverse', inverse);
-        },
-        unbindInverse: function() {
-            this._unbind('_inverse')
-        },
-        bindDownGraph: function(downGraph) {
-            this._bind('_downGraph', downGraph, '_upNode');
-        },
-        unbindDownGraph: function() {
-            this._unbind('_downGraph', '_upNode')
-        },
-        bindUpLink: function(upLink) {
-            this._bind('_upLink', upLink, '_downNode');
-        },
-        unbindUpLink: function() {
-            this._unbind('_upLink', '_downNode')
-        },
-        toJSON: function(json) {
-            this._toJsonBind(json, 'inverse');
-            this._toJsonBind(json, 'upLink');
-            return this._toJsonBind(json, 'downGraph');
-        },
-        fromJSON: function(json, map) {
-            this._fromJsonBound(json, map, 'inverse');
-            this._fromJsonBound(json, map, 'upLink');
-            this._fromJsonBound(json, map, 'downGraph');
-        },
-        free: function() {
-            this.unbindInverse();
-            var downGraph = this.downGraph();
-            var upLink = this.upLink();
-            this.unbindDownGraph();
-            this.unbindUpLink();
-            downGraph.free();
-            upLink.free();
+        fromJSON(json, map) {
+            this._multilevel = map[json.multilevelId];
         }
     };
 
     const NodeDual = {
-        config: {dual: true},
+        config: { dual: true },
 
         duality() {
             return this.belongsTo().duality();
@@ -606,7 +560,7 @@
 // ---------------- Nodes $mixins
 
     var NodesDual = {
-        config: {dual: true},
+        config: { dual: true },
 
         names: ['vertices', 'edges'],
 
@@ -620,31 +574,6 @@
 
     var NodesMultilevel = {
         config: { multilevel: true },
-
-        add: function(node, upLink, downGraph) {
-            this.$super("add", node);
-
-            if (upLink) {
-                this.bindUpLink(upLink);
-            } else {
-                var upLinks = this._owner.upNode().links();
-                upLinks.add(upLinks.newChild(), node);
-            }
-
-            if (downGraph) {
-                this.bindDownGraph(downGraph);
-            } else {
-                var downGraphs = this._owner.graphs();
-                downGraphs.add(downGraphs.newChild(), node);
-            }
-
-            return node;
-        },
-
-
-        up: function(duality) {
-            return this._owner.up().nodes(duality);
-        }
     };
 
 // ----------------- Graph
@@ -688,89 +617,70 @@
     var GraphMultilevel = {
         config: { multilevel: true },
 
-        initialize: function() {
-            this._upNode = null;
-            this._graphs = null
+        initialize(id, owner, multilevel) {
+            this._multilevel = multilevel;
         },
-        upNode: function() {
-            return this._upNode;
+        multilevel() {
+            return this._multilevel;
         },
-        graphs: function() {  // Graphs own by this graph
-            return this._graphs;
+        inverse() {
+            //this.multilevel().link().pair().multilevel().graph();
         },
-        next: function() {
-            return this._owner._owner;
+        toJSON(json) {
+            json.multilevelId = this._multilevel.id
         },
-        level: function() {
-            return this.next()? this.next().level() + 1 : 0;
+        fromJSON(json, map) {
+            this._multilevel = map[json.multilevelId];
         },
-        bindUpNode: function(upNode) {
-            this._bind('_upNode', upNode, '_downGraph');
+        graphs() {  // Graphs own by this graph
+            return this.nodes().map (node => node.multilevel().graph())
         },
-        unbindUpNode: function() {
-            this._unbind('_upNode', '_downGraph')
+        next() {
+            return this.multilevel().node().graph();
         },
-        toJSON: function(json) {
-            return this._toJsonBind(json, 'upNode');
-        },
-        fromJSON: function(json, map) {
-            this._fromJsonBound(json, map, 'upNode');
-        },
-        free: function() {
-            var upNode = this.upNode();
-            this.unbindUpNode();
-            upNode.free();
+        level() {
+            return this.next() ? this.next().level() + 1 : 0;
         }
     };
 
 // -----------  Graphs
 
-    var Graphs = GraphContainer.extend({
+    const Graphs = GraphContainer.extend({
         type: function() {
-            return Types.Graph
+            return Types.Graphs
         }
     });
 
-    var GraphsMultilevel = {
+    const GraphsMultilevel = {
+        config: { multilevel: true },
+
         initialize: function(owner) {
             owner._graphs = this;
         },
-        config: { multilevel: true },
 
-        add: function(graph, upNode) {
-            this.$super("add", graph);
-
-            if (upNode) {
-                this.bindUpNode(upNode);
-            } else {
-                var upNodes = this._owner.nodes();
-                upNodes.add(upNodes.newChild(), graph);
-            }
-            return graph;
-        }
     };
 
 // ----------------- Graph Factory
 
-    var GraphFactory = OOP.Class.extend({
+    const GraphFactory = OOP.Class.extend({
         $statics: {
             VERSION: '0.1',
 
             Types, Direction, Duality,
 
-            register: function(config, props) {
-                var factory = new GraphFactory(config, props);
+            register(config, props) {
+                const factory = new GraphFactory(config, props);
                 GraphFactory[factory.name] = factory;
                 return factory;
             },
-            getFactoryByConfig: function(config) {
+            getFactoryByConfig(config) {
                 return GraphFactory[GraphFactory._configToName(config || {})];
             },
-            getFactoryByName: function(fullname) {
+            getFactoryByName(fullname) {
                 return GraphFactory[fullname]
             },
-            _configToName: function(config) {
-                var name = config.name || 'default';
+            _configToName(config) {
+                let name = config.name || 'default';
                 if (config.directed) {
                     name += '_directed';
                 }
@@ -783,45 +693,43 @@
                 return name;
             }
         },
-        $constructor: function(config, props) {
+        $constructor(config, props) {
             this.config = config;
             this.name = GraphFactory._configToName(config);
             FP.extend(this, props);
         },
-
-        create: function(type, id, owner) {
+        create(type, id, owner) {
             return new this[type.name](id, owner);
         },
-
-        createLink: function(id, owner) {
-            return new this.Link(id, owner)
+        createLink(id, ...rest) {
+            return new this.Link(id, ...rest)
         },
-        createLinks: function(id, owner) {
-            return new this.Links(id, owner)
+        createLinks(id, ...rest) {
+            return new this.Links(id, ...rest)
         },
-        createNode: function(id, owner) {
-            return new this.Node(id, owner)
+        createNode(id, ...rest) {
+            return new this.Node(id, ...rest)
         },
-        createNodes: function(id, owner) {
-            return new this.Nodes(id, owner)
+        createNodes(id, ...rest) {
+            return new this.Nodes(id, ...rest)
         },
-        createGraph: function(id, owner) {
-            return new this.Graph(id, owner)
+        createGraph(id, ...rest) {
+            return new this.Graph(id, ...rest)
         },
-        createGraphs: function(id, owner) {
-            return new this.Graphs(id, owner)
+        createGraphs(id, ...rest) {
+            return new this.Graphs(id, ...rest)
         }
     });
 
-    var Directed = {
+    const Directed = {
         config: { directed: true }
     };
 
-    var Multilevel = {
+    const Multilevel = {
         config: { multilevel: true }
     };
 
-    var Dual = {
+    const Dual = {
         config: { dual: true }
     };
 
@@ -1005,9 +913,9 @@
         })
     });
 
-    var exports = typeof exports !== "undefined"? exports : root;   // CommonJS module support
+    const Exports = typeof exports !== "undefined" ? exports : root;   // CommonJS module support
 
-    exports.G = GraphFactory;
+    Exports.G = GraphFactory;
 
 
 })(this, this.OOP, this.FP);
