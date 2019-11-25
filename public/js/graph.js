@@ -239,57 +239,57 @@
         Container: GraphContainer,
         names: ['0', '1'],
 
-        initialize: function(owner) {
+        initialize(owner) {
             this[0] = new this.Container(this.names[0] + '#' + this.id, owner);
             this[1] = new this.Container(this.names[1] + '#' + this.id, owner);
         },
-        container: function(enumerator) {
+        container(enumerator) {
             return enumerator !== undefined ? this[enumerator.ordinal !== undefined ? enumerator.ordinal : enumerator] : this;
         },
-        get: function(index) {
+        get(index) {
             const size0 = this[0].size();
             return index < size0 ? this[0].get(index) : this[1].get(index - size0);
         },
-        indexOf: function(gobj) {
+        indexOf(gobj) {
             const indexOf0 = this[0].indexOf(gobj);
             return indexOf0 === -1 ? indexOf0 : this[1].indexOf(gobj);
         },
-        forEach: function(func, thisArg) {
+        forEach(func, thisArg) {
             this[0].forEach(func, thisArg || this);
             this[1].forEach(func, thisArg || this);
             return this;
         },
-        find: function(func, thisArg) {
+        find(func, thisArg) {
             const find0 = this[0].find(func, thisArg || this);
             return find0 ? find0 : this[1].find(func, thisArg || this);
         },
-        size: function() {
+        size() {
             return this[0].size() + this[1].size();
         },
-        empty: function() {
+        empty() {
             return this[0].empty() && this[1].empty();
         },
-        add: function(gobj, enumerator) {
+        add(gobj, enumerator) {
             return this.container(enumerator || 0).add(gobj);
         },
-        addNew: function(id, enumerator) {
+        addNew(id, enumerator) {
             return this.container(enumerator || 0).addNew(id);
         },
-        remove: function(gobj) {
+        remove(gobj) {
             const idx = this[0].remove(gobj)
             return idx !== -1 ? idx : this[1].remove(gobj);
         },
-        free: function() {
+        free() {
             this[0].free();
             this[1].free();
         },
-        toJSON: function() {
+        toJSON() {
             const json = Object.create(null);
             json[this.names[0]] = this[0].toJSON();
             json[this.names[1]] = this[1].toJSON();
             return json;
         },
-        fromJSON: function(json, map) {
+        fromJSON(json, map) {
             this[0].fromJSON(json[this.names[0]], map);
             this[1].fromJSON(json[this.names[1]], map);
         }
@@ -501,7 +501,7 @@
             return this._links;
         },
         toJSON(json) {
-            json.links = this.links().toJSON();
+            json.links = this.links().toJSON(json);
             return json
         },
         fromJSON(json, map) {
@@ -559,40 +559,40 @@
 
 // ---------------- Nodes $mixins
 
-    var NodesDual = {
+    const NodesDual = {
         config: { dual: true },
 
         names: ['vertices', 'edges'],
 
-        dual: function() {
+        dual() {
             return this.belongsTo().nodes(this.duality().dual());
         },
-        duality: function() {
+        duality() {
             return this.belongsTo().duality(this);
         }
     };
 
-    var NodesMultilevel = {
+    const NodesMultilevel = {
         config: { multilevel: true },
     };
 
 // ----------------- Graph
 
-    var Graph = GraphObject.extend( {
-        initialize: function() {
+    const Graph = GraphObject.extend( {
+        initialize() {
             this._nodes = this.factory().createNodes(undefined, this)
         },
-        type: function() {
+        type() {
             return Types.Graph;
         },
-        nodes: function() {
+        nodes() {
             return this._nodes;
         },
-        toJSON: function(json) {
-            json.nodes = this.nodes().toJSON();
+        toJSON(json) {
+            json.nodes = this.nodes().toJSON(json);
             return json
         },
-        fromJSON: function(json, map) {
+        fromJSON(json, map) {
             this.nodes().fromJSON(json.nodes , map)
         }
     });
@@ -600,16 +600,16 @@
 // --------------- Graph $mixins
 
     var GraphDual = {
-        config: {dual: true},
+        config: { dual: true },
 
-        nodes: function(duality) {
+        nodes(duality) {
             return duality? this._nodes.container(duality) : this._nodes;
         },
-        duality: function(nodes) {
+        duality(nodes) {
             return this._nodes[0] === nodes? Duality.Edge : this._nodes[1] === nodes? Duality.Vertex : undefined;
         },
-        indexOf: function(nodes) {
-            var duality = this.duality(nodes);
+        indexOf(nodes) {
+            const duality = this.duality(nodes);
             return duality? duality : -1;
         }
     };
@@ -632,32 +632,44 @@
         fromJSON(json, map) {
             this._multilevel = map[json.multilevelId];
         },
-        graphs() {  // Graphs own by this graph
-            return this.nodes().map (node => node.multilevel().graph())
+        nextGraphs() {  // Graphs own by this graph
+            return this.nodes().multilevel().graphs();
         },
-        next() {
-            return this.multilevel().node().graph();
+        prevGraph() {
+            let multilevelOwner = this.multilevel().belongsTo()
+            return multilevelOwner ? multilevelOwner.belongsTo().graph() : null;
         },
         level() {
-            return this.next() ? this.next().level() + 1 : 0;
+            const prev = this.prevGraph();
+            return prev ? prev.level() + 1 : 0;
+        },
+        toJSON: function(json) {
+            const nextGraphs = this.nextGraphs();
+            if (nextGraphs) {
+                json.nextGraphs = nextGraphs.toJSON(json)
+            }
+            const prevGraph = this.prevGraph();
+            if (prevGraph) {
+                json.prevGraphId = prevGraph.id;
+            }
+            json.level = this.level();
+            return json
+        },
+        fromJSON: function(json, map) {
+            // TODO
         }
     };
 
 // -----------  Graphs
 
     const Graphs = GraphContainer.extend({
-        type: function() {
+        type() {
             return Types.Graphs
         }
     });
 
     const GraphsMultilevel = {
         config: { multilevel: true },
-
-        initialize: function(owner) {
-            owner._graphs = this;
-        },
-
     };
 
 // ----------------- Graph Factory
