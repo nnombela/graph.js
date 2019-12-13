@@ -52,16 +52,14 @@
         }),
 
         free: OOP.Extensible.create(function() {
-            if (!this._owner) {
-                return // nothing to do here
-            }
-            const currentOwner = this._owner;
+            const owner = this.belongsTo();
             this._owner = null;
-            currentOwner.free(this);
+            owner ? owner.free(this) : undefined;
         }),
 
         type() {
-            return this._owner ? this._owner.type().children() : undefined;
+            const owner = this.belongsTo();
+            return owner && owner.type().children()
         },
         factory() {
             return GraphFactory.getFactoryByConfig(this.config);
@@ -70,7 +68,8 @@
             return this.type() + '#' + this.id;
         },
         index() {
-            return this._owner ? this._owner.indexOf(this) : -1;
+            const owner = this.belongsTo();
+            return owner ? owner.indexOf(this) : -1;
         },
         indexOf() {
             return -1;
@@ -92,7 +91,7 @@
             }
         }),
 
-        // ---- Private methods
+        // ---- Private helper methods
 
         _bind(prop, that) { // "this" is implicit
             if (this[prop] === null && that[prop] === null) {
@@ -224,7 +223,6 @@
             }
             return idx;
         },
-
         toJSON() {
             return this._children.map(elem => elem.toJSON())
         },
@@ -309,19 +307,22 @@
         },
         link() {
             if (!this._link) {
-                this._link = this.factory().createLink('link#' + this.id, this._owner && this._owner._links, this)
+                const owner = this.belongsTo();
+                this._link = this.factory().createLink('link#' + this.id, owner && owner.links(), this)
             }
             return this._link;
         },
         node() {
             if (!this._node) {
-                this._node = this.factory().createNode('node#' + this.id, this._owner && this._owner._nodes, this)
+                const owner = this.belongsTo();
+                this._node = this.factory().createNode('node#' + this.id, owner && owner.nodes(), this)
             }
             return this._node;
         },
         graph() {
             if (!this._graph) {
-                this._graph = this.factory().createGraph('graph#' + this.id, this._owner && this._owner._graphs, this);
+                const owner = this.belongsTo();
+                this._graph = this.factory().createGraph('graph#' + this.id, owner && owner.graphs(), this);
             }
             return this._graph;
         },
@@ -350,18 +351,25 @@
         },
         links() {
             if (!this._links) {
-                this._links = this.factory().createLinks('links#' + this.id, this._owner, this)
+                const owner = this.belongsTo();
+                this._links = this.factory().createLinks('links#' + this.id, owner && owner.node(), this)
             }
+            return this._links;
         },
         nodes() {
             if (!this._nodes) {
-                this._nodes = this.factory().createNodes('nodes#' + this.id, this._owner, this);
+                const owner = this.belongsTo();
+                this._nodes = this.factory().createNodes('nodes#' + this.id, owner && owner.graph(), this);
             }
+            return this._nodes;
         },
         graphs() {
             if (!this._graphs) {
-                this._graphs = this.factory().createGraphs('graphs#' + this.id, this._owner, this);
+                const owner = this.belongsTo();
+                // TODO not sure about ownership here
+                this._graphs = this.factory().createGraphs('graphs#' + this.id, owner, this);
             }
+            return this._graphs;
         },
         hasLinks() {
             return this._links;
@@ -636,8 +644,7 @@
             return this.nodes().multilevel().graphs();
         },
         prevGraph() {
-            let multilevelOwner = this.multilevel().belongsTo()
-            return multilevelOwner ? multilevelOwner.belongsTo().graph() : null;
+            return this.belongsTo(Types.Graph)
         },
         level() {
             const prev = this.prevGraph();
