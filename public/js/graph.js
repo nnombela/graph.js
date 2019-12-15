@@ -37,9 +37,9 @@
             UNIQUE_ID_PATTERN: 'g000-100000000000' // set this to undefined to generate uuidv4
         },
 
-        $constructor(id, ...rest) {
+        $constructor(id, owner) {
             this.id = id || OOP.uniqueId(GraphObject.UNIQUE_ID_PATTERN);
-            this.initialize.apply(this, rest);
+            this.initialize.call(this, owner);
         },
 
         config: OOP.Extensible.create({name: 'default'}),
@@ -293,6 +293,56 @@
         }
     });
 
+    const DelegateGraphContainer = GraphObject.extend({
+        $mixins: [Iterable, Accessible],
+
+        delegate() {
+            throw new Error('delegate method not implemented')
+        },
+        free() {
+            this.delegate().free();
+        },
+        get(index) {
+            return this.delegate().get(index);
+        },
+        size() {
+            return this.delegate().size();
+        },
+        empty() {
+            return this.delegate().size() === 0;
+        },
+        forEach(func, thisArg) {
+            this.delegate().forEach(func, thisArg || this);
+        },
+        indexOf(child) {
+            return this.delegate().indexOf(child);
+        },
+        find(func, thisArg) {
+            return this.delegate().find(func, thisArg || this);
+        },
+        contains(gobj) {
+            return this.delegate().contains(gobj)
+        },
+        add(gobj) {
+            return this.delegate().add(gobj)
+        },
+        newChild(id) {
+            return this.delegate().newChild(id)
+        },
+        addNew(id) {
+            return this.delegate().addNew(id)
+        },
+        remove(gobj) {
+            return this.delegate().remove(gobj)
+        },
+        toJSON() {
+            return this.delegate().toJSON()
+        },
+        fromJSON(json, map) {
+            this.delegate().fromJSON(json, map)
+        }
+    })
+
     const MultilevelGraphObject = GraphObject.extend({
         free: function() {
             this._link && this._link.free()
@@ -487,6 +537,12 @@
         multilevel() {
             return this._multilevel;
         },
+        delegate() {
+            return this._multilevel;
+        },
+        get(index) {
+            return this.multilevel().get(index).link();
+        },
         inverse(direction) {
             return this.belongsTo().inverse().links(direction);
         },
@@ -603,6 +659,12 @@
         multilevel() {
             return this._multilevel;
         },
+        delegate() {
+            return this._multilevel;
+        },
+        get(index) {
+            return this.multilevel().get(index).node();
+        },
         toJSON(json) {
             json.multilevelId = this.multilevel().id
         },
@@ -640,7 +702,7 @@
 
 // --------------- Graph $mixins
 
-    var GraphDual = {
+    const GraphDual = {
         config: { dual: true },
 
         nodes(duality) {
@@ -655,7 +717,7 @@
         }
     };
 
-    var GraphMultilevel = {
+    const GraphMultilevel = {
         config: { multilevel: true },
 
         initialize(id, owner, multilevel) {
@@ -663,6 +725,12 @@
         },
         multilevel() {
             return this._multilevel;
+        },
+        delegate() {
+            return this._multilevel;
+        },
+        get(index) {
+            return this.multilevel().get(index).graph();
         },
         inverse() {
             //this.multilevel().link().pair().multilevel().graph();
@@ -703,17 +771,14 @@
 
 // -----------  Graphs
 
-    const Graphs = GraphContainer.extend({
-        type() {
-            return Types.Graphs
-        }
-    });
-
     const GraphsMultilevel = {
         config: { multilevel: true },
 
         multilevel() {
             return this._multilevel;
+        },
+        type() {
+            return Types.Graphs
         },
         toJSON(json) {
             json.multilevelId = this.multilevel().id
@@ -770,23 +835,23 @@
         create(type, id, owner) {
             return new this[type.name](id, owner);
         },
-        createLink(id, ...rest) {
-            return new this.Link(id, ...rest)
+        createLink(id, owner) {
+            return new this.Link(id, owner)
         },
-        createLinks(id, ...rest) {
-            return new this.Links(id, ...rest)
+        createLinks(id, owner) {
+            return new this.Links(id, owner)
         },
-        createNode(id, ...rest) {
-            return new this.Node(id, ...rest)
+        createNode(id, owner) {
+            return new this.Node(id, owner)
         },
-        createNodes(id, ...rest) {
-            return new this.Nodes(id, ...rest)
+        createNodes(id, owner) {
+            return new this.Nodes(id, owner)
         },
-        createGraph(id, ...rest) {
-            return new this.Graph(id, ...rest)
+        createGraph(id, owner) {
+            return new this.Graph(id, owner)
         },
-        createGraphs(id, ...rest) {
-            return new this.Graphs(id, ...rest)
+        createGraphs(id, owner) {
+            return new this.Graphs(id, owner)
         }
     });
 
@@ -808,7 +873,7 @@
         Node: Node,
         Nodes: GraphContainer,
         Graph: Graph,
-        Graphs: Graphs
+        Graphs: GraphContainer
     });
 
     GraphFactory.register({name: 'default', directed: true}, {
@@ -830,7 +895,7 @@
         Graph: Graph.extend({
             $mixins: [Directed]
         }),
-        Graphs: Graphs.extend({
+        Graphs: GraphContainer.extend({
             $mixins: [Directed]
         })
     });
@@ -854,7 +919,7 @@
         Graph: Graph.extend({
             $mixins: [GraphDual]
         }),
-        Graphs: Graphs.extend({
+        Graphs: GraphContainer.extend({
             $mixins: [Dual]
         })
     });
@@ -863,19 +928,19 @@
         Link: Link.extend({
             $mixins: [LinkMultilevel]
         }),
-        Links: GraphContainer.extend({
+        Links: DelegateGraphContainer.extend({
             $mixins: [LinksMultilevel]
         }),
         Node: Node.extend({
             $mixins: [NodeMultilevel]
         }),
-        Nodes: GraphContainer.extend({
+        Nodes: DelegateGraphContainer.extend({
             $mixins: [NodesMultilevel]
         }),
         Graph: Graph.extend({
             $mixins: [GraphMultilevel]
         }),
-        Graphs: Graphs.extend({
+        Graphs: DelegateGraphContainer.extend({
             $mixins: [GraphsMultilevel]
         })
     });
@@ -902,7 +967,7 @@
         Graph: Graph.extend({
             $mixins: [Directed, GraphDual]
         }),
-        Graphs: Graphs.extend({
+        Graphs: GraphContainer.extend({
             $mixins: [Directed, Dual]
         })
     });
@@ -913,20 +978,20 @@
         }),
         Links: DuoGraphContainer.extend({
             $mixins: [LinksDirected, LinksMultilevel],
-            Container: {
+            Container: DelegateGraphContainer.extend({
                 $mixins: [LinksDirected, LinksMultilevel]
-            }
+            })
         }),
         Node: Node.extend({
             $mixins: [NodeDirected, NodeMultilevel]
         }),
-        Nodes: GraphContainer.extend({
+        Nodes: DelegateGraphContainer.extend({
             $mixins: [Directed, NodesMultilevel]
         }),
         Graph: Graph.extend({
             $mixins: [Directed, GraphMultilevel]
         }),
-        Graphs: Graphs.extend({
+        Graphs: DelegateGraphContainer.extend({
             $mixins: [Directed, GraphsMultilevel]
         })
     });
@@ -935,7 +1000,7 @@
         Link: Link.extend({
             $mixins: [Dual, LinkMultilevel]
         }),
-        Links: GraphContainer.extend({
+        Links: DelegateGraphContainer.extend({
             $mixins: [Dual, LinksMultilevel]
         }),
         Node: Node.extend({
@@ -943,14 +1008,14 @@
         }),
         Nodes: DuoGraphContainer.extend({
             $mixins: [NodesDual, NodesMultilevel],
-            Container: {
+            Container: DelegateGraphContainer.extend({
                 $mixins: [NodesDual, NodesMultilevel]
-            }
+            })
         }),
         Graph: Graph.extend({
             $mixins: [GraphDual, GraphMultilevel]
         }),
-        Graphs: Graphs.extend({
+        Graphs: DelegateGraphContainer.extend({
             $mixins: [Dual, GraphsMultilevel]
         })
     });
@@ -961,23 +1026,23 @@
         }),
         Links: DuoGraphContainer.extend({
             $mixins: [LinksDirected, Dual, LinksMultilevel],
-            Container: {
+            Container: DelegateGraphContainer.extend({
                 $mixins: [LinksDirected, Dual, LinksMultilevel]
-            }
+            })
         }),
         Node: Node.extend({
             $mixins: [NodeDirected, NodeDual, NodeMultilevel]
         }),
         Nodes: DuoGraphContainer.extend({
             $mixins: [Directed, NodesDual, NodesMultilevel],
-            Container: {
+            Container: DelegateGraphContainer.extend({
                 $mixins: [Directed, NodesDual, NodesMultilevel]
-            }
+            })
         }),
         Graph: Graph.extend({
             $mixins: [Directed, GraphDual, GraphMultilevel]
         }),
-        Graphs: Graphs.extend({
+        Graphs: DelegateGraphContainer.extend({
             $mixins: [Directed, Dual, GraphsMultilevel]
         })
     });
