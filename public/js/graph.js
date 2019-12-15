@@ -324,7 +324,7 @@
             return this.delegate().contains(gobj)
         },
         add(gobj) {
-            return this.delegate().add(gobj)
+            return this.delegate().add(gobj.delegate())
         },
         newChild(id) {
             return this.delegate().newChild(id)
@@ -385,6 +385,9 @@
     });
 
     const MultilevelGraphContainer = GraphContainer.extend({
+        newChild(id) {
+            return new MultilevelGraphObject(id);
+        },
         free() {
             this._links && this._links.free()
             this._nodes && this._nodes.free()
@@ -488,11 +491,6 @@
     };
 
     const LinkMultilevel = {
-        config: { multilevel: true },
-
-        multilevel() {
-            return this._multilevel;
-        },
         checkCanBeBound(pair) {
             if (!pair.from().inverse().links().empty()) {
                 throw new Error(pair + ' can not be multilevel bound');
@@ -532,14 +530,6 @@
     };
 
     const LinksMultilevel = {
-        config: { multilevel: true },
-
-        multilevel() {
-            return this._multilevel;
-        },
-        delegate() {
-            return this._multilevel;
-        },
         get(index) {
             return this.multilevel().get(index).link();
         },
@@ -604,14 +594,6 @@
     };
 
     const NodeMultilevel = {
-        config: { multilevel: true },
-
-        initialize(id, owner, multilevel) {
-            this._multilevel = multilevel;
-        },
-        multilevel() {
-            return this._multilevel;
-        },
         inverse() {
             this.multilevel().link().pair().multilevel().node();
         },
@@ -654,14 +636,6 @@
     };
 
     const NodesMultilevel = {
-        config: { multilevel: true },
-
-        multilevel() {
-            return this._multilevel;
-        },
-        delegate() {
-            return this._multilevel;
-        },
         get(index) {
             return this.multilevel().get(index).node();
         },
@@ -718,17 +692,6 @@
     };
 
     const GraphMultilevel = {
-        config: { multilevel: true },
-
-        initialize(id, owner, multilevel) {
-            this._multilevel = multilevel;
-        },
-        multilevel() {
-            return this._multilevel;
-        },
-        delegate() {
-            return this._multilevel;
-        },
         get(index) {
             return this.multilevel().get(index).graph();
         },
@@ -738,8 +701,8 @@
         nextGraphs() {  // Graphs own by this graph
             return this.nodes().multilevel().graphs();
         },
-        prevGraph() {
-            return this.belongsTo(Types.Graph)
+        prevGraph() { // Graph that owns this graph
+            return this.multilevel().node().belongsTo()
         },
         level() {
             const prev = this.prevGraph();
@@ -772,11 +735,6 @@
 // -----------  Graphs
 
     const GraphsMultilevel = {
-        config: { multilevel: true },
-
-        multilevel() {
-            return this._multilevel;
-        },
         type() {
             return Types.Graphs
         },
@@ -860,7 +818,17 @@
     };
 
     const Multilevel = {
-        config: { multilevel: true }
+        config: { multilevel: true },
+
+        delegate () {
+            return this.multilevel()
+        },
+        multilevel () {
+            return this._multilevel;
+        },
+        free () {
+            return this.multilevel().free()
+        }
     };
 
     const Dual = {
@@ -926,22 +894,22 @@
 
     GraphFactory.register({name: 'default', multilevel: true}, {
         Link: Link.extend({
-            $mixins: [LinkMultilevel]
+            $mixins: [Multilevel, LinkMultilevel]
         }),
         Links: DelegateGraphContainer.extend({
-            $mixins: [LinksMultilevel]
+            $mixins: [Multilevel, LinksMultilevel]
         }),
         Node: Node.extend({
-            $mixins: [NodeMultilevel]
+            $mixins: [Multilevel, NodeMultilevel]
         }),
         Nodes: DelegateGraphContainer.extend({
-            $mixins: [NodesMultilevel]
+            $mixins: [Multilevel, NodesMultilevel]
         }),
         Graph: Graph.extend({
-            $mixins: [GraphMultilevel]
+            $mixins: [Multilevel, GraphMultilevel]
         }),
         Graphs: DelegateGraphContainer.extend({
-            $mixins: [GraphsMultilevel]
+            $mixins: [Multilevel, GraphsMultilevel]
         })
     });
 
@@ -974,76 +942,76 @@
 
     GraphFactory.register({name: 'default', directed: true, multilevel: true}, {
         Link: Link.extend({
-            $mixins: [LinkDirected, LinkMultilevel]
+            $mixins: [LinkDirected, Multilevel, LinkMultilevel]
         }),
         Links: DuoGraphContainer.extend({
-            $mixins: [LinksDirected, LinksMultilevel],
+            $mixins: [LinksDirected, Multilevel, LinksMultilevel],
             Container: DelegateGraphContainer.extend({
-                $mixins: [LinksDirected, LinksMultilevel]
+                $mixins: [LinksDirected, Multilevel, LinksMultilevel]
             })
         }),
         Node: Node.extend({
-            $mixins: [NodeDirected, NodeMultilevel]
+            $mixins: [NodeDirected, Multilevel, NodeMultilevel]
         }),
         Nodes: DelegateGraphContainer.extend({
-            $mixins: [Directed, NodesMultilevel]
+            $mixins: [Directed, Multilevel, NodesMultilevel]
         }),
         Graph: Graph.extend({
-            $mixins: [Directed, GraphMultilevel]
+            $mixins: [Directed, Multilevel, GraphMultilevel]
         }),
         Graphs: DelegateGraphContainer.extend({
-            $mixins: [Directed, GraphsMultilevel]
+            $mixins: [Directed, Multilevel, GraphsMultilevel]
         })
     });
 
     GraphFactory.register({name: 'default', dual: true, multilevel: true}, {
         Link: Link.extend({
-            $mixins: [Dual, LinkMultilevel]
+            $mixins: [Dual, Multilevel, LinkMultilevel]
         }),
         Links: DelegateGraphContainer.extend({
-            $mixins: [Dual, LinksMultilevel]
+            $mixins: [Dual, Multilevel, LinksMultilevel]
         }),
         Node: Node.extend({
-            $mixins: [NodeDual, NodeMultilevel]
+            $mixins: [NodeDual, Multilevel, NodeMultilevel]
         }),
         Nodes: DuoGraphContainer.extend({
-            $mixins: [NodesDual, NodesMultilevel],
+            $mixins: [NodesDual, Multilevel, NodesMultilevel],
             Container: DelegateGraphContainer.extend({
-                $mixins: [NodesDual, NodesMultilevel]
+                $mixins: [NodesDual, Multilevel, NodesMultilevel]
             })
         }),
         Graph: Graph.extend({
-            $mixins: [GraphDual, GraphMultilevel]
+            $mixins: [GraphDual, Multilevel, GraphMultilevel]
         }),
         Graphs: DelegateGraphContainer.extend({
-            $mixins: [Dual, GraphsMultilevel]
+            $mixins: [Dual, Multilevel, GraphsMultilevel]
         })
     });
 
     GraphFactory.register({name: 'default', directed: true, dual: true, multilevel: true}, {
         Link: Link.extend({
-            $mixins: [LinkDirected, Dual, LinkMultilevel]
+            $mixins: [LinkDirected, Dual, Multilevel, LinkMultilevel]
         }),
         Links: DuoGraphContainer.extend({
-            $mixins: [LinksDirected, Dual, LinksMultilevel],
+            $mixins: [LinksDirected, Dual, Multilevel, LinksMultilevel],
             Container: DelegateGraphContainer.extend({
-                $mixins: [LinksDirected, Dual, LinksMultilevel]
+                $mixins: [LinksDirected, Dual, Multilevel, LinksMultilevel]
             })
         }),
         Node: Node.extend({
-            $mixins: [NodeDirected, NodeDual, NodeMultilevel]
+            $mixins: [NodeDirected, NodeDual, Multilevel, NodeMultilevel]
         }),
         Nodes: DuoGraphContainer.extend({
-            $mixins: [Directed, NodesDual, NodesMultilevel],
+            $mixins: [Directed, NodesDual, Multilevel, NodesMultilevel],
             Container: DelegateGraphContainer.extend({
-                $mixins: [Directed, NodesDual, NodesMultilevel]
+                $mixins: [Directed, NodesDual, Multilevel, NodesMultilevel]
             })
         }),
         Graph: Graph.extend({
-            $mixins: [Directed, GraphDual, GraphMultilevel]
+            $mixins: [Directed, GraphDual, Multilevel, GraphMultilevel]
         }),
         Graphs: DelegateGraphContainer.extend({
-            $mixins: [Directed, Dual, GraphsMultilevel]
+            $mixins: [Directed, Dual, Multilevel, GraphsMultilevel]
         })
     });
 
