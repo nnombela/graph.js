@@ -183,8 +183,8 @@
     const GraphContainer = GraphObject.extend({
         $mixins: [Iterable, Accessible],
 
-        initialize(owner, delegate = []) {
-            this._children = delegate;
+        initialize(owner, container = []) {
+            this._children = container;
         },
         free() {
             this.forEach(child => this.remove(child))
@@ -358,11 +358,6 @@
     });
 
     const MultilevelGraphObject = GraphObject.extend({
-        initialize(owner, gobj) {
-            this._link = gobj && gobj.type() === Types.Link ? gobj : null;
-            this._node = gobj && gobj.type() === Types.Node ? gobj : null;
-            this._graph = gobj && gobj.type() === Types.Graph ? gobj : null;
-        },
         type() {
             return MultilevelTypes.MultilevelObject
         },
@@ -374,21 +369,24 @@
         link() {
             if (!this._link) {
                 const owner = this.belongsTo();
-                this._link = this.factory().createLink('link#' + this.id, owner && owner.links(), this);
+                this._link = this.factory().createLink('link#' + this.id, owner && owner.links());
+                this._link._multilevel = this;
             }
             return this._link;
         },
         node() {
             if (!this._node) {
                 const owner = this.belongsTo();
-                this._node = this.factory().createNode('node#' + this.id, owner && owner.nodes(), this);
+                this._node = this.factory().createNode('node#' + this.id, owner && owner.nodes());
+                this._node._multilevel = this;
             }
             return this._node;
         },
         graph() {
             if (!this._graph) {
                 const owner = this.belongsTo();
-                this._graph = this.factory().createGraph('graph#' + this.id, owner && owner.graphs(), this);
+                this._graph = this.factory().createGraph('graph#' + this.id, owner && owner.graphs());
+                this._graph._multilevel = this;
             }
             return this._graph;
         },
@@ -404,11 +402,6 @@
     });
 
     const MultilevelGraphContainer = GraphContainer.extend({
-        initialize(owner, gcontainer) {
-            this._links = gcontainer && gcontainer.type() === Types.Links ? gcontainer : null;
-            this._nodes = gcontainer && gcontainer.type() === Types.Nodes ? gcontainer : null;
-            this._graphs = gcontainer && gcontainer.type() === Types.Graphs ? gcontainer : null;
-        },
         type() {
             return MultilevelTypes.MultilevelContainer
         },
@@ -423,14 +416,16 @@
         links() {
             if (!this._links) {
                 const owner = this.belongsTo();
-                this._links = this.factory().createLinks('links#' + this.id, owner && owner.node(), this);
+                this._links = this.factory().createLinks('links#' + this.id, owner && owner.node());
+                this._links._multilevel = this;
             }
             return this._links;
         },
         nodes() {
             if (!this._nodes) {
                 const owner = this.belongsTo();
-                this._nodes = this.factory().createNodes('nodes#' + this.id, owner && owner.graph(), this);
+                this._nodes = this.factory().createNodes('nodes#' + this.id, owner && owner.graph());
+                this._nodes._multilevel = this;
             }
             return this._nodes;
         },
@@ -438,7 +433,8 @@
             if (!this._graphs) {
                 const owner = this.belongsTo();
                 // TODO not sure about ownership here
-                this._graphs = this.factory().createGraphs('graphs#' + this.id, owner && owner.graph(), this);
+                this._graphs = this.factory().createGraphs('graphs#' + this.id, owner && owner.graph());
+                this._graphs._multilevel = this;
             }
             return this._graphs;
         },
@@ -456,9 +452,11 @@
     const MultilevelDelegateGraphContainer = DelegateGraphContainer.extend({
         config: { multilevel: true },
 
-        createMultilevel() {
-            const prefix = this.type() + '#';
-            const multilevelId = this.id.startsWith(prefix) ? this.id.substring(prefix.length) : undefined;
+        createMultilevel(multilevelId) {
+            if (!multilevelId) {
+                const prefix = this.type() + '#';
+                multilevelId = this.id.startsWith(prefix) ? this.id.substring(prefix.length) : undefined;
+            }
             const owner = this.belongsTo();
             return new MultilevelGraphContainer(multilevelId, owner && owner.multilevel(), this);
         },
@@ -479,8 +477,8 @@
             if (map[json.multilevelId]) {
                 this._delegate = map[json.multilevelId];
             } else {
-                this._delegate = this.createMultilevel();
-                map[this._delegate.id] = this._delegate;
+                this._delegate = this.createMultilevel(json.multilevelId);
+                map[json.multilevelId] = this._delegate;
             }
         }
     });
@@ -554,11 +552,12 @@
 
     const LinkMultilevel = {
         config: { multilevel: true },
-
-        initialize(owner, multilevel) {
-            this._multilevel = multilevel || new MultilevelGraphObject(undefined, owner && owner.multilevel(), this);
-        },
+        
         multilevel() {
+            if (!this._multilevel) {
+                this._multilevel = new MultilevelGraphObject();
+                this._multilevel._link = this;
+            }
             return this._multilevel;
         },
         checkCanBeBound(pair) {
@@ -574,13 +573,11 @@
             json.multilevelId = this.multilevel().id
         },
         fromJSON(json, map) {
-            if (map[json.multilevelId]) {
-                this._multilevel = map[json.multilevelId];
-            } else {
-                this._multilevel = new MultilevelGraphObject(null, null, this);
-                this._multilevel._link = this;
-                map[this._multilevel.id] = this._multilevel;
+            if (!map[json.multilevelId]) {
+                map[json.multilevelId] = new MultilevelGraphObject();
             }
+            this._multilevel = map[json.multilevelId];
+            this._multilevel._link = this;
         }
     };
 
