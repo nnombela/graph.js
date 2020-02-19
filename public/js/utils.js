@@ -99,7 +99,7 @@
     }
 
     //
-    const uuidV4Pattern = '10000000-1000-4000-8000-100000000000'
+    const uuidV4Pattern = '10000000-1000-4000-8000-100000000000';
 
     function uniqueId(pattern) {
         return (pattern || uuidV4Pattern).replace(/[018]/g, c => {
@@ -134,6 +134,7 @@
     });
 
     // Extensible objects implement extend method that uses prototypical inheritance on objects and compose on functions (which are also objects)
+    // Extensible could have been called Composable
     var Extensible = extend(function() {}, {
         extend: function(obj) {
             // in case both are functions then compose otherwise create new object

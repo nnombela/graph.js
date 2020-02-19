@@ -15,8 +15,9 @@
         parse (str, reviver) {
             const obj = JSON.parse(str, reviver);
             const factory = G.getFactoryByName(obj.factoryName);
-            const gobj = factory.create(G.Types[obj.typeName], obj.value.id);
-            gobj.fromJSON(obj.value, Object.create(null));
+            const value = obj.value;
+            const gobj = factory.create(G.Types[obj.typeName], value.id, value);
+            gobj.fromJSON(value, Object.create(null));
             return gobj;
         }
     };

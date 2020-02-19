@@ -8,6 +8,11 @@ describe("Graph Aspects", function() {
         expect(G.Types.Node.parent()).toEqual(G.Types.Nodes);
     });
 
+    it("a Type member container is a container", function() {
+        expect(G.Types.Graphs.isContainer()).toEqual(true);
+        expect(G.Types.Graph.isContainer()).toEqual(false);
+    });
+
     it("a Direction member has a reverse", function() {
         expect(G.Direction.In.reverse()).toEqual(G.Direction.Out);
     });
