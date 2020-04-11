@@ -125,10 +125,10 @@ describe('G default, multilevel=true', function() {
         const stringify = G.JSON.stringify(graph);
         console.log('stringify: ' + stringify);
 
-        //const graph2 = G.JSON.parse(stringify);
+        const graph2 = G.JSON.parse(stringify);
+        const stringify2 = G.JSON.stringify(graph2);
 
-        //const stringify2 = G.JSON.stringify(graph2);
-
+        //expect(stringify).toEqual(stringify2);
         expect(stringify).toContain('Graph');
     });
 });

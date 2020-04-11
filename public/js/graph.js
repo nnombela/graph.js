@@ -390,15 +390,14 @@
         nodes() {
             if (!this._nodes) {
                 const owner = this.belongsTo();
-                this._nodes = this.factory().createNodes('nodes#' + this.id, {owner: owner.graph(), multilevel: this});
+                this._nodes = this.factory().createNodes('nodes#' + this.id, {owner: owner && owner.graph(), multilevel: this});
             }
             return this._nodes;
         },
         graphs() {
             if (!this._graphs) {
-                const owner = this.belongsTo();
-                // TODO not sure about ownership here
-                this._graphs = this.factory().createGraphs('graphs#' + this.id, {owner: owner && owner.graph(), multilevel: this});
+                // const owner = this.belongsTo(); // TODO not sure about ownership here
+                this._graphs = this.factory().createGraphs('graphs#' + this.id, {owner: null, multilevel: this});
             }
             return this._graphs;
         },
@@ -472,17 +471,25 @@
             return this.map(elem => elem.toJSON(json))
         },
         fromJSON(json, map) {
-            json.forEach(child => this.addNew(child.id, child).fromJSON(child, map));
+            json.forEach(child => {
+                const obj = this.newChild(child.id);
+                obj.fromJSON(child, map);
+                this.add(obj)
+            });
         }
     });
 
     const Multilevel = {
         config: { multilevel: true },
 
+        createMultilevel(id) {
+            const MultilevelType = this.type().isContainer() ? MultilevelGraphContainer : MultilevelGraphObject;
+            return new MultilevelType(id, {[this.type().toString()] : this});
+
+        },
         initialize({multilevelId}) {
             if (!multilevelId) {
-                const MultilevelType = this.type().isContainer() ? MultilevelGraphContainer : MultilevelGraphObject;
-                this.multilevel = new MultilevelType('multilevel(' + this.id +')', {[this.type().toString()] : this});
+                this.multilevel = this.createMultilevel('multilevel#' + this.id);
             }
         },
         toJSON(json) {
@@ -490,11 +497,10 @@
             return json
         },
         fromJSON(json, map) {
-            if (map[json.multilevelId]) {
-                this.multilevel = map[json.multilevelId]
-            } else {
-                map[this.multilevel.id] = this.multilevel;
+            if (!map[json.multilevelId]) {
+                map[json.multilevelId] = this.multilevel || this.createMultilevel(json.multilevelId);
             }
+            this.multilevel = map[json.multilevelId]
         }
     };
 
