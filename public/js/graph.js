@@ -35,7 +35,7 @@
 
     const MultilevelTypes = OOP.Enum.create(['MultilevelContainer', 'MultilevelObject'], {
         // labels
-        MultilevelContainer: 'multilevelContainer', MultilevelObject: 'multilevelObject',
+        MultilevelContainer: 'mlc', MultilevelObject: 'mlo',
         children () {
             return MultilevelTypes.members[this.ordinal + 1]
         },
@@ -48,7 +48,8 @@
     const GraphObject = OOP.Class.extend({
         $statics: {
             Types, Direction, Duality,
-            UNIQUE_ID_PATTERN: 'g000-100000' // set this to undefined to generate uuidv4
+            UNIQUE_ID_PATTERN: 'g000-100000', // set this to undefined to generate uuidv4
+            GlobalId: (id, type) => id ? type + '#' + id : undefined,
         },
 
         $constructor(id, props = {}) {
@@ -69,16 +70,15 @@
                 owner.free(this);
             }
         }),
-
+        globalId() {
+            return GraphObject.GlobalId(this.id, this.type());
+        },
         type() {
             const owner = this.belongsTo();
             return owner && owner.type().children()
         },
         factory() {
             return GraphFactory.getFactoryByConfig(this.config);
-        },
-        globalId() {
-            return this.type() + '#' + this.id;
         },
         toString() {
             return this.globalId()
@@ -103,7 +103,7 @@
         fromJSON: OOP.Extensible.create(function(json, map) {
             if (json.id) {
                 this.id = json.id;
-                map[json.id] = this;
+                map[this.globalId()] = this;
             }
         }),
 
@@ -135,9 +135,9 @@
             return json;
         },
         _fromJsonBound(json, map, name) {
-            const bound = json[name + 'Id'];
-            if (bound && map[bound]) {
-                this._bind('_' + name, map[bound]);
+            const boundId = GraphObject.GlobalId(json[name + 'Id'], this.type());
+            if (boundId && map[boundId]) {
+                this._bind('_' + name, map[boundId]);
             }
         }
     });
@@ -256,8 +256,8 @@
         names: ['0', '1'],
 
         initialize(props) {
-            this[0] = new this.Container(this.names[0] + '#' + this.id, props);
-            this[1] = new this.Container(this.names[1] + '#' + this.id, props);
+            this[0] = new this.Container(this.id + ':0', props);
+            this[1] = new this.Container(this.id + ':1', props);
         },
         container(enumerator) {
             return enumerator !== undefined ? this[enumerator.ordinal !== undefined ? enumerator.ordinal : enumerator] : this;
@@ -334,21 +334,21 @@
         link() {
             if (!this._link) {
                 const owner = this.belongsTo();
-                this._link = this.factory().createLink('link#' + this.id, {owner: owner && owner.links(), multilevel: this} );
+                this._link = this.factory().createLink(this.id, {owner: owner && owner.links(), multilevel: this} );
             }
             return this._link;
         },
         node() {
             if (!this._node) {
                 const owner = this.belongsTo();
-                this._node = this.factory().createNode('node#' + this.id, {owner: owner && owner.nodes(), multilevel: this});
+                this._node = this.factory().createNode(this.id, {owner: owner && owner.nodes(), multilevel: this});
             }
             return this._node;
         },
         graph() {
             if (!this._graph) {
                 const owner = this.belongsTo();
-                this._graph = this.factory().createGraph('graph#' + this.id, {owner : owner && owner.graphs(), multilevel: this} );
+                this._graph = this.factory().createGraph(this.id, {owner : owner && owner.graphs(), multilevel: this} );
             }
             return this._graph;
         },
@@ -386,21 +386,21 @@
         links() {
             if (!this._links) {
                 const owner = this.belongsTo();
-                this._links = this.factory().createLinks('links#' + this.id, {owner: owner && owner.node(), multilevel: this});
+                this._links = this.factory().createLinks(this.id, {owner: owner && owner.node(), multilevel: this});
             }
             return this._links;
         },
         nodes() {
             if (!this._nodes) {
                 const owner = this.belongsTo();
-                this._nodes = this.factory().createNodes('nodes#' + this.id, {owner: owner && owner.graph(), multilevel: this});
+                this._nodes = this.factory().createNodes(this.id, {owner: owner && owner.graph(), multilevel: this});
             }
             return this._nodes;
         },
         graphs() {
             if (!this._graphs) {
                 // const owner = this.belongsTo(); // TODO not sure about ownership here
-                this._graphs = this.factory().createGraphs('graphs#' + this.id, {owner: null, multilevel: this});
+                this._graphs = this.factory().createGraphs(this.id, {owner: null, multilevel: this});
             }
             return this._graphs;
         },
@@ -416,47 +416,59 @@
     });
 
     const MultilevelDelegateGraphContainer = GraphObject.extend({
+        config: { multilevel: true },
         $mixins: [Iterable, Accessible],
 
+        createMultilevel() {
+            return new MultilevelGraphContainer(this.id, {[this.type().toString()] : this});
+        },
+        initialize({lazy}) {
+            if (!lazy) {
+                this._multilevel = this.createMultilevel()
+            }
+        },
+        multilevel() {
+            return this._multilevel
+        },
         free() {
-            this.multilevel.free();
+            this.multilevel().free();
         },
         elem(multilevelElem) { // this method will be overridden for specific type
             const childrenType = this.type().children().toString();
             return MultilevelGraphObject[childrenType].apply(multilevelElem)
         },
         get(index) {
-            return this.elem(this.multilevel.get(index));
+            return this.elem(this.multilevel().get(index));
         },
         size() {
-            return this.multilevel.size();
+            return this.multilevel().size();
         },
         empty() {
-            return this.multilevel.empty();
+            return this.multilevel().empty();
         },
         forEach(func, thisArg) {
-            this.multilevel.forEach(function(elem, index, array) {
+            this.multilevel().forEach(function(elem, index, array) {
                 return func.call(this, this.elem(elem), index, array)
             }, thisArg || this);
         },
         map(func, thisArg) {
-            return this.multilevel.map(function(elem, index, array) {
+            return this.multilevel().map(function(elem, index, array) {
                 return func.call(this, this.elem(elem), index, array)
             }, thisArg || this);
         },
         indexOf(child) {
-            return this.multilevel.indexOf(child.multilevel);
+            return this.multilevel().indexOf(child.multilevel());
         },
         find(func, thisArg) {
-            return this.multilevel.find(function(elem, index, array) {
+            return this.multilevel().find(function(elem, index, array) {
                 return func.call(this, this.elem(elem), index, array)
             }, thisArg || this);
         },
         contains(gobj) {
-            return this.multilevel.contains(gobj.multilevel)
+            return this.multilevel().contains(gobj.multilevel())
         },
         add(gobj) {
-            this.multilevel.add(gobj.multilevel);
+            this.multilevel().add(gobj.multilevel());
             return this;
         },
         newChild(id, props) {
@@ -468,14 +480,16 @@
             return gobj;
         },
         remove(gobj) {
-            return this.multilevel.remove(gobj.multilevel)
+            return this.multilevel().remove(gobj.multilevel())
         },
         toJSON(json) {
             return this.map(elem => elem.toJSON(json))
         },
         fromJSON(json, map) {
+            const globalMultilevelId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelContainer);
+            this._multilevel = map[globalMultilevelId] = map[globalMultilevelId] || this.createMultilevel();
             json.container.forEach(child => {
-                const obj = this.newChild(child.id);
+                const obj = this.newChild(child.id, {lazy: json.lazy});
                 obj.fromJSON(child, map);
                 this.add(obj)
             });
@@ -485,33 +499,20 @@
     const Multilevel = {
         config: { multilevel: true },
 
-        createMultilevel(id) {
-            const MultilevelType = this.type().isContainer() ? MultilevelGraphContainer : MultilevelGraphObject;
-            return new MultilevelType(id, {[this.type().toString()] : this});
-
+        createMultilevel() {
+            return new MultilevelGraphObject(this.id, {[this.type().toString()] : this});
         },
-        initialize({multilevelId}) {
-            if (!multilevelId) {
-                this.multilevel = this.createMultilevel(this.multilevelId());
+        initialize({lazy}) {
+            if (!lazy) {
+                this._multilevel = this.createMultilevel();
             }
         },
-        toJSON(json) {
-            json.multilevelId = this.multilevelId();
-            return json
-        },
-        multilevelId(idx = '') {
-            if (this.multilevel) {
-                return this.multilevel.id
-            }
-            const owner = this.belongsTo();
-            return owner ? owner.multilevelId() + '[' + idx + ']' : undefined;
+        multilevel() {
+            return this._multilevel
         },
         fromJSON(json, map) {
-            if (this.multilevel) {
-                return
-            }
-            const multilevelId = json.multilevelId || this.multilevelId(json.idx);
-            this.multilevel = map[multilevelId] = map[multilevelId] || this.createMultilevel(multilevelId);
+            const globalMultilevelId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelObject);
+            this._multilevel = map[globalMultilevelId] = map[globalMultilevelId] || this.createMultilevel();
         }
     };
 
@@ -613,6 +614,9 @@
         },
         direction() {
             return this.belongsTo().direction(this);
+        },
+        type() {
+            return Types.Links
         }
     };
 
@@ -631,8 +635,8 @@
 // --------------- Node
 
     const Node = GraphObject.extend({
-        initialize() {
-            this._links = this.factory().createLinks('links#' + this.id, {owner: this});
+        initialize({lazy}) {
+            this._links = this.factory().createLinks(this.id, {owner: this, lazy});
         },
         type() {
             return Types.Node;
@@ -648,7 +652,7 @@
             return json
         },
         fromJSON(json, map) {
-            this.links().fromJSON({container: json.links}, map);
+            this.links().fromJSON({container: json.links, lazy: json.lazy}, map);
         },
         free() {
             this.links().free();
@@ -698,6 +702,9 @@
         },
         duality() {
             return this.belongsTo().duality(this);
+        },
+        type() {
+            return Types.Nodes
         }
     };
 
@@ -713,8 +720,8 @@
 // ----------------- Graph
 
     const Graph = GraphObject.extend( {
-        initialize() {
-            this._nodes = this.factory().createNodes('nodes#' + this.id, {owner: this})
+        initialize({lazy}) {
+            this._nodes = this.factory().createNodes(this.id, {owner: this, lazy})
         },
         type() {
             return Types.Graph;
@@ -727,7 +734,7 @@
             return json
         },
         fromJSON(json, map) {
-            this.nodes().fromJSON({container: json.nodes} , map)
+            this.nodes().fromJSON({container: json.nodes, lazy: json.lazy} , map)
         }
     });
 
@@ -898,19 +905,19 @@
             $mixins: [Multilevel, LinkMultilevel]
         }),
         Links: MultilevelDelegateGraphContainer.extend({
-            $mixins: [Multilevel, LinksMultilevel]
+            $mixins: [LinksMultilevel]
         }),
         Node: Node.extend({
             $mixins: [Multilevel, NodeMultilevel]
         }),
         Nodes: MultilevelDelegateGraphContainer.extend({
-            $mixins: [Multilevel, NodesMultilevel]
+            $mixins: [NodesMultilevel]
         }),
         Graph: Graph.extend({
             $mixins: [Multilevel, GraphMultilevel]
         }),
         Graphs: MultilevelDelegateGraphContainer.extend({
-            $mixins: [Multilevel, GraphsMultilevel]
+            $mixins: [GraphsMultilevel]
         })
     });
 

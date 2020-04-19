@@ -128,7 +128,7 @@ describe('G default, multilevel=true', function() {
         const graph2 = G.JSON.parse(stringify);
         const stringify2 = G.JSON.stringify(graph2);
 
-        //expect(stringify).toEqual(stringify2);
+        expect(stringify).toEqual(stringify2);
         expect(stringify).toContain('Graph');
     });
 });
