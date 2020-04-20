@@ -44,11 +44,11 @@
         },
     });
 
-    // Graph objects
+    // Base Graph object
     const GraphObject = OOP.Class.extend({
         $statics: {
             Types, Direction, Duality,
-            UNIQUE_ID_PATTERN: 'g000-100000', // set this to undefined to generate uuidv4
+            UNIQUE_ID_PATTERN: 'g000-1000-0000', // set this to undefined to generate uuidv4
             GlobalId: (id, type) => id ? type + '#' + id : undefined,
         },
 
@@ -65,10 +65,8 @@
 
         free: OOP.Extensible.create(function() {
             const owner = this.belongsTo();
-            if (owner) {
-                this._owner = null;
-                owner.free(this);
-            }
+            this._owner = null;
+            owner && owner.free(this);
         }),
         globalId() {
             return GraphObject.GlobalId(this.id, this.type());
@@ -87,13 +85,9 @@
             const owner = this.belongsTo();
             return owner ? owner.indexOf(this) : -1;
         },
-        indexOf() {
-            return -1;
-        },
         belongsTo(type) {
             return type === undefined || this.type() === type ? this._owner : this._owner.belongsTo(type);
         },
-
 
         // ---- JSON
         toJSON: OOP.Extensible.create(function() {
@@ -108,7 +102,6 @@
         }),
 
         // ---- Private helper methods
-
         _bind(prop, that) { // "this" is implicit
             if (this[prop] && this[prop] !== that) {
                 throw new Error(this + ' object is already bound @' + prop + ' property to ' + this[prop]);
@@ -184,6 +177,7 @@
         }
     };
 
+    // Base Graph Container
     const GraphContainer = GraphObject.extend({
         $mixins: [Iterable, Accessible],
 
@@ -420,10 +414,12 @@
         $mixins: [Iterable, Accessible],
 
         createMultilevel() {
-            return new MultilevelGraphContainer(this.id, {[this.type().toString()] : this});
+            return new MultilevelGraphContainer(this.id, {[this.type()] : this});
         },
-        initialize({lazy}) {
-            if (!lazy) {
+        initialize({multilevel, lazy}) {
+            if (multilevel) {
+                this._multilevel = multilevel;
+            } else if (!lazy) {
                 this._multilevel = this.createMultilevel()
             }
         },
@@ -434,8 +430,8 @@
             this.multilevel().free();
         },
         elem(multilevelElem) { // this method will be overridden for specific type
-            const childrenType = this.type().children().toString();
-            return MultilevelGraphObject[childrenType].apply(multilevelElem)
+            const childrenType = this.type().children();
+            return MultilevelGraphObject[childrenType.toString()].apply(multilevelElem)
         },
         get(index) {
             return this.elem(this.multilevel().get(index));
@@ -500,10 +496,12 @@
         config: { multilevel: true },
 
         createMultilevel() {
-            return new MultilevelGraphObject(this.id, {[this.type().toString()] : this});
+            return new MultilevelGraphObject(this.id, {[this.type()] : this});
         },
-        initialize({lazy}) {
-            if (!lazy) {
+        initialize({multilevel, lazy}) {
+            if (multilevel) {
+                this._multilevel = multilevel;
+            } else if (!lazy) {
                 this._multilevel = this.createMultilevel();
             }
         },
@@ -604,6 +602,12 @@
 
 // -------------- Links $mixins
 
+    const Links = {
+        type() {
+            return Types.Links
+        }
+    };
+
     const LinksDirected = {
         config: { directed: true },
 
@@ -692,6 +696,12 @@
 
 // ---------------- Nodes $mixins
 
+    const Nodes = {
+        type() {
+            return Types.Nodes
+        }
+    };
+
     const NodesDual = {
         config: { dual: true },
 
@@ -773,6 +783,12 @@
 
 // -----------  Graphs
 
+    const Graphs = {
+        type() {
+            return Types.Graphs;
+        }
+    };
+
     const GraphsMultilevel = {
         elem(multilevel) {
             return multilevel && multilevel.graph();
@@ -845,11 +861,17 @@
 
     GraphFactory.register({name: 'default'}, {
         Link: Link,
-        Links: GraphContainer,
+        Links: GraphContainer.extend( {
+            $mixins: [Links]
+        }),
         Node: Node,
-        Nodes: GraphContainer,
+        Nodes: GraphContainer.extend( {
+            $mixins: [Nodes]
+        }),
         Graph: Graph,
-        Graphs: GraphContainer
+        Graphs: GraphContainer.extend( {
+            $mixins: [Graphs]
+        })
     });
 
     GraphFactory.register({name: 'default', directed: true}, {
