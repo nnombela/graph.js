@@ -3,13 +3,11 @@
 //  Graph library
 (function(root, OOP, FP) {
     // Enums
-    const Types = OOP.Enum.create(['Graphs', 'Graph', 'Nodes', 'Node', 'Links', 'Link'], {
-        // labels
-        Graphs: 'graphs', Graph: 'graph', Nodes: 'nodes', Node: 'node', Links: 'links', Link: 'link',
-        children () {
+    const Types = OOP.Enum.create({Graphs: 'graphs', Graph: 'graph', Nodes: 'nodes', Node: 'node', Links: 'links', Link: 'link'}, {
+        children() {
             return Types.members[this.ordinal + 1]
         },
-        parent () {
+        parent() {
             return Types.members[this.ordinal - 1]
         },
         isContainer() {
@@ -17,29 +15,23 @@
         }
     });
 
-    const Direction = OOP.Enum.create(['In', 'Out'], {
-        // labels
-        In: 'in', Out: 'out',
+    const Direction = OOP.Enum.create({In: 'in', Out: 'out'}, {
         reverse() {
             return Direction.members[(this.ordinal + 1) % 2];
         }
     });
 
-    const Duality =  OOP.Enum.create(['Vertex', 'Edge'], {
-        // labels
-        Vertex: 'vertex', Edge: 'edge',
+    const Duality =  OOP.Enum.create({Vertex: 'vertex', Edge: 'edge'}, {
         dual() {
             return Duality.members[(this.ordinal + 1) % 2];
         }
     });
 
-    const MultilevelTypes = OOP.Enum.create(['MultilevelContainer', 'MultilevelObject'], {
-        // labels
-        MultilevelContainer: 'mlc', MultilevelObject: 'mlo',
-        children () {
+    const MultilevelTypes = OOP.Enum.create({MultilevelContainer: 'mlc', MultilevelObject: 'mlo'}, {
+        children() {
             return MultilevelTypes.members[this.ordinal + 1]
         },
-        parent () {
+        parent() {
             return MultilevelTypes.members[this.ordinal - 1]
         },
     });
@@ -317,6 +309,10 @@
         type() {
             return MultilevelTypes.MultilevelObject
         },
+        level() {
+            const owner = this.belongsTo();
+            return owner ? owner.level() + 1 : 0;
+        },
         free() {
             this._link && this._link.free();
             this._node && this._node.free();
@@ -373,6 +369,10 @@
             this._links && this._links.free();
             this._nodes && this._nodes.free();
             this._graphs && this._graphs.free();
+        },
+        level() {
+            const owner = this.belongsTo();
+            return owner ? owner.level() + 1 : 0;
         },
         links() {
             if (!this._links) {
@@ -767,14 +767,10 @@
             //this.multilevel().link().pair().multilevel().graph();
         },
         prevGraphs() {
-            return this.multilevel().belongsTo().graphs();
+            return this.belongsTo();
         },
         nextGraphs() {  // Graphs own by this graph
             return this.nodes().multilevel().graphs();
-        },
-        level() {
-            const previous = this.prevGraphs();
-            return previous && previous.length > 0 ? previous[0].level() + 1 : 0;
         }
     };
 

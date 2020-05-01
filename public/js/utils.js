@@ -147,7 +147,7 @@
     });
 
     var Enum = extend(function() {}, {
-        create: function(names, props) {
+        create: function(elems, props) {
             var extendedProps = extend(props || {}, {
                 $constructor: function(name, label, ordinal) {
                     this.name = name;
@@ -158,12 +158,12 @@
                     return this.label;
                 },
                 $statics: {
-                    names
+                    names: isObject(elems) ? Object.keys(elems) : elems
                 }
             });
             var instance = Class.extend(extendedProps);
-            instance.members = names.map(function(name, ordinal) {
-                return instance[name] = new instance(name, props[name], ordinal)
+            instance.members = instance.names.map(function(name, ordinal) {
+                return instance[name] = new instance(name, elems[name], ordinal)
             });
             return instance;
         }

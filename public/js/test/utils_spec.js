@@ -76,9 +76,7 @@ describe("Point - Circle", function() {
         }
     });
 
-    var Colors = OOP.Enum.create(['White', 'Black'], {
-        White: 'white',
-        Black: 'black',
+    var Colors = OOP.Enum.create({White: 'white', Black: 'black'}, {
         reverse: function() {
             return Colors.members[(this.ordinal + 1) % 2];
         }
