@@ -49,7 +49,7 @@
         $statics: {
             Types, Direction, Duality,
             UNIQUE_ID_PATTERN: 'g000-1000-0000', // set this to undefined to generate uuidv4
-            GlobalId: (id, type) => id ? type + '#' + id : undefined,
+            GlobalId: (id, type = '') => id ? type + '#' + id : undefined,
         },
 
         $constructor(id, props = {}) {
@@ -95,10 +95,7 @@
         }),
 
         fromJSON: OOP.Extensible.create(function(json, map) {
-            if (json.id) {
-                this.id = json.id;
-                map[this.globalId()] = this;
-            }
+            map[this.globalId()] = this;
         }),
 
         // ---- Private helper methods
@@ -485,7 +482,7 @@
             const globalMultilevelId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelContainer);
             this._multilevel = map[globalMultilevelId] = map[globalMultilevelId] || this.createMultilevel();
             json.container.forEach(child => {
-                const obj = this.newChild(child.id, {lazy: json.lazy});
+                const obj = this.newChild(child.id, {lazy: true});
                 obj.fromJSON(child, map);
                 this.add(obj)
             });
@@ -639,8 +636,8 @@
 // --------------- Node
 
     const Node = GraphObject.extend({
-        initialize({lazy}) {
-            this._links = this.factory().createLinks(this.id, {owner: this, lazy});
+        initialize(props) {
+            this._links = this.factory().createLinks(this.id, FP.extend(props, {owner: this}));
         },
         type() {
             return Types.Node;
@@ -656,7 +653,7 @@
             return json
         },
         fromJSON(json, map) {
-            this.links().fromJSON({container: json.links, lazy: json.lazy}, map);
+            this.links().fromJSON({container: json.links}, map);
         },
         free() {
             this.links().free();
@@ -730,8 +727,8 @@
 // ----------------- Graph
 
     const Graph = GraphObject.extend( {
-        initialize({lazy}) {
-            this._nodes = this.factory().createNodes(this.id, {owner: this, lazy})
+        initialize(props) {
+            this._nodes = this.factory().createNodes(this.id, FP.extend(props, {owner: this}))
         },
         type() {
             return Types.Graph;
@@ -744,7 +741,7 @@
             return json
         },
         fromJSON(json, map) {
-            this.nodes().fromJSON({container: json.nodes, lazy: json.lazy} , map)
+            this.nodes().fromJSON({container: json.nodes} , map)
         }
     });
 
