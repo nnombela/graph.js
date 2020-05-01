@@ -9,12 +9,12 @@ describe('G default', function() {
     const node1 = factory.createNode('node1');
     const node2 = new factory.Node('node2');
 
-    graph.nodes().add(node1).add(node2).addNew();
+    graph.nodes.add(node1).add(node2).addNew();
 
     const link1 = factory.createLink('link1');
-    node1.links().add(link1);
+    node1.links.add(link1);
 
-    const link2 = node2.links().addNew();
+    const link2 = node2.links.addNew();
 
     link1.bind(link2);
 
@@ -26,7 +26,7 @@ describe('G default', function() {
 
         const stringify2 = G.JSON.stringify(graph2);
 
-        expect(graph.nodes().size()).toBe(graph2.nodes().size());
+        expect(graph.nodes.size()).toBe(graph2.nodes.size());
 
         expect(stringify).toEqual(stringify2);
     });
@@ -43,20 +43,17 @@ describe('G default, directed=true', function() {
     const node1 = factory.createNode('node1');
     const node2 = new factory.Node('node2');
 
-    graph.nodes().add(node1).add(node2).addNew();
+    graph.nodes.add(node1).add(node2).addNew();
 
     const link1 = factory.createLink('link1');
-    node1.links(D.In).add(link1);
-    const link3 = node1.links(D.Out).addNew();
+    node1.getLinks(D.In).add(link1);
+    const link3 = node1.getLinks(D.Out).addNew();
 
-    const link2 = node2.links(D.Out).addNew('link2');
-    const link4 = node2.links(D.In).addNew();
+    const link2 = node2.getLinks(D.Out).addNew('link2');
+    const link4 = node2.getLinks(D.In).addNew();
 
     link1.bind(link2);
     link3.bind(link4);
-
-    //link1.bindReverse(link3);
-    //link2.bindReverse(link4);
 
     it('stringify - parse', function() {
         const stringify = G.JSON.stringify(graph);
@@ -66,7 +63,7 @@ describe('G default, directed=true', function() {
 
         const stringify2 = G.JSON.stringify(graph2);
 
-        expect(graph.nodes().size()).toBe(graph2.nodes().size());
+        expect(graph.nodes.size()).toBe(graph2.nodes.size());
 
         expect(stringify).toEqual(stringify2);
     });
@@ -83,16 +80,16 @@ describe('G default, dual=true', function() {
     const node1 = factory.createNode('node1');
     const node2 = new factory.Node('node2');
 
-    graph.nodes(D.Vertex).add(node1).addNew();
-    graph.nodes(D.Edge).add(node2);
+    graph.getNodes(D.Vertex).add(node1).addNew();
+    graph.getNodes(D.Edge).add(node2);
 
     const link1 = factory.createLink('link1');
-    node1.links().add(link1);
+    node1.links.add(link1);
 
-    const link3 = node1.links().addNew();
+    const link3 = node1.links.addNew();
 
-    const link2 = node2.links().addNew('link2');
-    const link4 = node2.links().addNew();
+    const link2 = node2.links.addNew('link2');
+    const link4 = node2.links.addNew();
 
     link1.bind(link2);
     link3.bind(link4);
@@ -105,7 +102,7 @@ describe('G default, dual=true', function() {
 
         const stringify2 = G.JSON.stringify(graph2);
 
-        expect(graph.nodes().size()).toBe(graph2.nodes().size());
+        expect(graph.nodes.size()).toBe(graph2.nodes.size());
 
         expect(stringify).toEqual(stringify2);
     });
@@ -119,7 +116,7 @@ describe('G default, multilevel=true', function() {
 
     const node1 = factory.createNode('node1');
 
-    graph.nodes().add(node1).addNew();
+    graph.nodes.add(node1).addNew();
 
     it('stringify - parse', function() {
         const stringify = G.JSON.stringify(graph);
