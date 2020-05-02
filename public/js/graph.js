@@ -157,8 +157,9 @@
             get(gobj) {
                 return this.array[gobj.index()];
             },
-            members(gobj, value) {
+            set(gobj, value) {
                 this.array[gobj.index()] = value;
+                return this;
             }
         }),
         accessor() {
@@ -171,31 +172,34 @@
         $mixins: [Iterable, Accessible],
 
         initialize({container = []}) {
-            this.container = container;
+            this._container = container;
+        },
+        container() {
+            return this._container;
         },
         free() {
             this.forEach(child => this.remove(child))
         },
         get(index) {
-            return this.container[index];
+            return this.container()[index];
         },
         size() {
-            return this.container.length;
+            return this.container().length;
         },
         empty() {
             return this.size() === 0;
         },
         forEach(func) {
-            this.container.forEach(func, this);
+            this.container().forEach(func, this);
         },
         map(func) {
-            return this.container.map(func, this);
+            return this.container().map(func, this);
         },
         indexOf(child) {
-            return this.container.indexOf(child);
+            return this.container().indexOf(child);
         },
         find(func) {
-            return this.container.find(func, this);
+            return this.container().find(func, this);
         },
         contains(gobj) {
             return this.indexOf(gobj) !== -1;
@@ -205,7 +209,7 @@
                 throw new Error('This graph object ' + gobj + ' could not be added to ' + this + ' graph container');
             }
             gobj.initialize({owner: this});
-            this.container.push(gobj);
+            this.container().push(gobj);
             return this;
         },
         newChild(id, props) {
@@ -219,7 +223,7 @@
         remove(gobj) {
             const idx = this.indexOf(gobj);
             if (idx !== -1) {
-                this.container.splice(idx, 1);
+                this.container().splice(idx, 1);
                 gobj.free();
             }
             return idx;
@@ -242,8 +246,11 @@
             this[0] = new this.Container(this.id + ':0', props);
             this[1] = new this.Container(this.id + ':1', props);
         },
+        graphContainer(enumerator) {
+            return enumerator === undefined ? this : this[enumerator.ordinal];
+        },
         container(enumerator) {
-            return enumerator !== undefined ? this[enumerator.ordinal !== undefined ? enumerator.ordinal : enumerator] : this;
+            return enumerator === undefined ? this[0].container().concat(this[1].container()) : this[enumerator.ordinal].container();
         },
         get(index) {
             const size0 = this[0].size();
@@ -256,10 +263,9 @@
         forEach(func) {
             this[0].forEach(func,  this);
             this[1].forEach(func, this);
-            return this;
         },
         map(func) {
-            return this[0].map(func).concat(this[1].map(func))
+            return this.container().map(func, this)
         },
         find(func) {
             const find0 = this[0].find(func, this);
@@ -272,10 +278,10 @@
             return this[0].empty() && this[1].empty();
         },
         add(gobj, enumerator) {
-            return this.container(enumerator || 0).add(gobj);
+            return this.graphContainer(enumerator || {ordinal: 0}).add(gobj);
         },
         addNew(id, enumerator) {
-            return this.container(enumerator || 0).addNew(id);
+            return this.graphContainer(enumerator || {ordinal: 0}).addNew(id);
         },
         remove(gobj) {
             const idx = this[0].remove(gobj);
@@ -423,6 +429,9 @@
             const childrenType = this.type().children();
             return MultilevelGraphObject[childrenType.toString()].apply(multilevelElem)
         },
+        callElemFunc(func) {
+            return (elem, ...rest) => func.call(this, this.elem(elem), ...rest)
+        },
         get(index) {
             return this.elem(this._multilevel.get(index));
         },
@@ -431,9 +440,6 @@
         },
         empty() {
             return this._multilevel.empty();
-        },
-        callElemFunc(func) {
-            return (elem, ...rest) => func.call(this, this.elem(elem), ...rest)
         },
         forEach(func) {
             this._multilevel.forEach(this.callElemFunc(func), this);
@@ -658,7 +664,7 @@
         config: { directed: true },
 
         links(direction) {
-            return this._links.container(direction);
+            return this._links.graphContainer(direction);
         },
         direction(links) {
             return this.links(Direction.In) === links ? Direction.In : this.links(Direction.Out) === links ? Direction.Out : undefined;
@@ -744,7 +750,7 @@
         config: { dual: true },
 
         nodes(duality) {
-            return duality ? this._nodes.container(duality) : this._nodes;
+            return duality ? this._nodes.graphContainer(duality) : this._nodes;
         },
         duality(nodes) {
             return this._nodes[0] === nodes? Duality.Edge : this._nodes[1] === nodes? Duality.Vertex : undefined;
