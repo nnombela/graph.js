@@ -90,7 +90,7 @@
             map[this.globalId()] = this;
         }),
 
-        // ---- Private helper methods
+        // ---- Binding helper methods
         _bind(prop, that) { // "this" is implicit
             if (this[prop] && this[prop] !== that) {
                 throw new Error(this + ' object is already bound @' + prop + ' property to ' + this[prop]);
@@ -185,17 +185,17 @@
         empty() {
             return this.size() === 0;
         },
-        forEach(func, thisArg) {
-            this.container.forEach(func, thisArg || this);
+        forEach(func) {
+            this.container.forEach(func, this);
         },
-        map(func, thisArg) {
-            return this.container.map(func, thisArg || this);
+        map(func) {
+            return this.container.map(func, this);
         },
         indexOf(child) {
             return this.container.indexOf(child);
         },
-        find(func, thisArg) {
-            return this.container.find(func, thisArg || this);
+        find(func) {
+            return this.container.find(func, this);
         },
         contains(gobj) {
             return this.indexOf(gobj) !== -1;
@@ -253,17 +253,17 @@
             const indexOf0 = this[0].indexOf(gobj);
             return indexOf0 === -1 ? indexOf0 : this[1].indexOf(gobj);
         },
-        forEach(func, thisArg) {
-            this[0].forEach(func, thisArg || this);
-            this[1].forEach(func, thisArg || this);
+        forEach(func) {
+            this[0].forEach(func,  this);
+            this[1].forEach(func, this);
             return this;
         },
-        map(func, thisArg) {
-            return this[0].map(func, thisArg).concat(this[1].map(func, thisArg))
+        map(func) {
+            return this[0].map(func).concat(this[1].map(func))
         },
-        find(func, thisArg) {
-            const find0 = this[0].find(func, thisArg || this);
-            return find0 ? find0 : this[1].find(func, thisArg || this);
+        find(func) {
+            const find0 = this[0].find(func, this);
+            return find0 ? find0 : this[1].find(func,  this);
         },
         size() {
             return this[0].size() + this[1].size();
@@ -432,23 +432,20 @@
         empty() {
             return this._multilevel.empty();
         },
-        forEach(func, thisArg) {
-            this._multilevel.forEach(function(elem, index, array) {
-                return func.call(this, this.elem(elem), index, array)
-            }, thisArg || this);
+        callElemFunc(func) {
+            return (elem, ...rest) => func.call(this, this.elem(elem), ...rest)
         },
-        map(func, thisArg) {
-            return this._multilevel.map(function(elem, index, array) {
-                return func.call(this, this.elem(elem), index, array)
-            }, thisArg || this);
+        forEach(func) {
+            this._multilevel.forEach(this.callElemFunc(func), this);
+        },
+        map(func) {
+            return this._multilevel.map(this.callElemFunc(func), this);
         },
         indexOf(child) {
             return this._multilevel.indexOf(child._multilevel);
         },
-        find(func, thisArg) {
-            return this._multilevel.find(function(elem, index, array) {
-                return func.call(this, this.elem(elem), index, array)
-            }, thisArg || this);
+        find(func) {
+            return this._multilevel.find(this.callElemFunc(func), this);
         },
         contains(gobj) {
             return this._multilevel.contains(gobj._multilevel)
@@ -522,7 +519,7 @@
             return Types.Link;
         },
         checkCanBeBound: OOP.Extensible.create(function(pair) {
-            if (!pair.node()) {
+            if (!pair.owner) {
                 throw new Error('Link ' + pair + ' is free, does not belong to a node');
             }
             if (pair.pair()) {
@@ -532,9 +529,11 @@
         bind(pair) {
             this.checkCanBeBound(pair);
             this._bind('_pair', pair);
+            return this;
         },
         unbind() {
-            this._unbind('_pair')
+            this._unbind('_pair');
+            return this;
         },
         node() {
             return this.belongsTo(Types.Node);
@@ -665,7 +664,8 @@
             return this.links(Direction.In) === links ? Direction.In : this.links(Direction.Out) === links ? Direction.Out : undefined;
         },
         indexOf(links) {
-            return this.direction(links) || -1;
+            const direction = this.direction(links);
+            return direction ? direction.ordinal : -1;
         }
     };
 
@@ -751,7 +751,7 @@
         },
         indexOf(nodes) {
             const duality = this.duality(nodes);
-            return duality? duality : -1;
+            return duality ? duality.ordinal : -1;
         }
     };
 
@@ -760,11 +760,15 @@
             //this.multilevel().link().pair().multilevel().graph();
         },
         nextGraphs() {  // Graphs own by this graph
-            return this.nodes().multilevel().graphs();
+            const multilevel = this.nodes().multilevel();
+            return multilevel.hasGraphs() ? multilevel.graphs() : undefined;
         },
         toJSON(json) {
             json.level = this.multilevel().level();
-            json.nextGraphs = this.nextGraphs().toJSON();
+            const nextGraphs = this.nextGraphs();
+            if (nextGraphs) {
+                json.nextGraphs = nextGraphs.toJSON();
+            }
             return json;
         },
     };
