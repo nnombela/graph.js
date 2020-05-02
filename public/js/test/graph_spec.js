@@ -37,16 +37,16 @@ describe("Default Graph", function() {
     const graph = factory.createGraph('graph1');
     const node1 = factory.createNode('node1');
     const node2 = new factory.Node('node2');
-    graph.nodes.add(node1).add(node2).addNew();
+    graph.nodes().add(node1).add(node2).addNew();
 
     const link1 = factory.createLink('link1');
-    node1.links.add(link1);
+    node1.links().add(link1);
 
-    const link2 = node2.links.addNew();
+    const link2 = node2.links().addNew();
     link1.bind(link2);
 
     it("Graph nodes contains nodes", function() {
-        const nodes = graph.nodes;
+        var nodes = graph.nodes();
 
         expect(nodes.size()).toBe(3);
         expect(nodes.contains(node1)).toBe(true);
@@ -54,8 +54,8 @@ describe("Default Graph", function() {
     });
 
     it("Graph links contains links and are bound", function() {
-        const links1 = node1.links;
-        const links2 = node2.links;
+        var links1 = node1.links();
+        var links2 = node2.links();
 
         expect(links1.size()).toBe(1);
         expect(links1.contains(link1)).toBe(true);
@@ -64,7 +64,7 @@ describe("Default Graph", function() {
         expect(links2.size()).toBe(1);
         expect(links2.contains(link2)).toBe(true);
 
-        expect(link1.pair).toEqual(link2);
+        expect(link1.pair()).toEqual(link2);
     });
 
 
