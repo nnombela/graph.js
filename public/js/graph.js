@@ -86,8 +86,8 @@
             return { id: this.id }
         }),
 
-        fromJSON: OOP.Extensible.create(function(json, map) {
-            map[this.globalId()] = this;
+        fromJSON: OOP.Extensible.create(function(json, pool) {
+            pool[this.globalId()] = this;
         }),
 
         // ---- Binding helper methods
@@ -116,10 +116,10 @@
             }
             return json;
         },
-        _fromJsonBound(json, map, name) {
+        _fromJsonBound(json, pool, name) {
             const boundId = GraphObject.GlobalId(json[name + 'Id'], this.type());
-            if (boundId && map[boundId]) {
-                this._bind('_' + name, map[boundId]);
+            if (boundId && pool[boundId]) {
+                this._bind('_' + name, pool[boundId]);
             }
         }
     });
@@ -171,8 +171,18 @@
     const GraphContainer = GraphObject.extend({
         $mixins: [Iterable, Accessible],
 
-        initialize({container = []}) {
-            this._container = container;
+        initialize({container, lazy}) {
+            if (container) {
+                this._container = container;
+            } else if (!lazy) {
+                this._container = this.createContainer()
+            }
+        },
+        createContainer() {
+            return []  // default implementation is just an array
+        },
+        containerGlobalId() {
+            return GraphObject.GlobalId(this.id, 'array');
         },
         container() {
             return this._container;
@@ -206,9 +216,12 @@
         },
         add(gobj) {
             if (gobj.type() !== this.type().children()) {
-                throw new Error('This graph object ' + gobj + ' could not be added to ' + this + ' graph container');
+                throw new Error('Graph object: ' + gobj + ' is not the right type and could not be added to graph container: ' + this);
             }
-            gobj.initialize({owner: this});
+            if (gobj.owner && gobj.owner !== this) {
+                throw new Error('Graph object: ' + gobj + ' is not free and could not be added to graph container: ' + this)
+            }
+            gobj.owner = this;
             this.container().push(gobj);
             return this;
         },
@@ -231,8 +244,16 @@
         toJSON() {
             return this.map(elem => elem.toJSON())
         },
-        fromJSON(json, map) {
-            json.container.forEach(child => this.addNew(child.id, child).fromJSON(child, map));
+        fromJSON(json, pool) {
+            if (!this._container) {
+                const containerGlobalId = this.containerGlobalId();
+                this._container = pool[containerGlobalId] = pool[containerGlobalId] || this.createContainer();
+            }
+            json.container.forEach(child => {
+                const obj = this.newChild(child.id, {lazy: true});
+                obj.fromJSON(child, pool);
+                this.add(obj)
+            });
         }
     });
 
@@ -291,15 +312,16 @@
             this[0].free();
             this[1].free();
         },
-        toJSON(json) {
-            json[this.names[0]] = this[0].toJSON();
-            json[this.names[1]] = this[1].toJSON();
-            return json;
+        toJSON() {
+            return {
+                [this.names[0]] : this[0].toJSON(),
+                [this.names[1]] : this[1].toJSON()
+            };
         },
-        fromJSON(json, map) {
+        fromJSON(json, pool) {
             const name0 = this.names[0], name1 = this.names[1];
-            this[0].fromJSON({container: json.container[name0], name: name0, idx: 0}, map);
-            this[1].fromJSON({container: json.container[name1], name: name1, idx: 1}, map);
+            this[0].fromJSON({container: json.container[name0], name: name0, idx: 0}, pool);
+            this[1].fromJSON({container: json.container[name1], name: name1, idx: 1}, pool);
         }
     });
 
@@ -405,105 +427,57 @@
         }
     });
 
-    const MultilevelDelegateGraphContainer = GraphObject.extend({
+    const MultilevelDelegateContainer = GraphContainer.extend({
         config: { multilevel: true },
-        $mixins: [Iterable, Accessible],
 
-        createMultilevel() {
+        createContainer() {
             return new MultilevelGraphContainer(this.id, {[this.type()] : this});
         },
-        initialize({multilevel, lazy}) {
-            if (multilevel) {
-                this._multilevel = multilevel;
-            } else if (!lazy) {
-                this._multilevel = this.createMultilevel()
-            }
+        containerGlobalId() {
+            return GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelContainer);
         },
         multilevel() {
-            return this._multilevel
+            return this._container; // this.$super('container');
         },
-        free() {
-            this._multilevel.free();
+        container() {
+            return this.multilevel().map((multilevelElem) => this.elem(multilevelElem))
         },
-        elem(multilevelElem) { // this method will be overridden for specific type
+        elem(multilevelObject) { // this method will be overridden for specific type
             const childrenType = this.type().children();
-            return MultilevelGraphObject[childrenType.toString()].apply(multilevelElem)
-        },
-        callElemFunc(func) {
-            return (elem, ...rest) => func.call(this, this.elem(elem), ...rest)
-        },
-        get(index) {
-            return this.elem(this._multilevel.get(index));
-        },
-        size() {
-            return this._multilevel.size();
-        },
-        empty() {
-            return this._multilevel.empty();
-        },
-        forEach(func) {
-            this._multilevel.forEach(this.callElemFunc(func), this);
-        },
-        map(func) {
-            return this._multilevel.map(this.callElemFunc(func), this);
-        },
-        indexOf(child) {
-            return this._multilevel.indexOf(child._multilevel);
-        },
-        find(func) {
-            return this._multilevel.find(this.callElemFunc(func), this);
-        },
-        contains(gobj) {
-            return this._multilevel.contains(gobj._multilevel)
+            return MultilevelGraphObject[childrenType.toString()].apply(multilevelObject)
         },
         add(gobj) {
-            this._multilevel.add(gobj._multilevel);
+            this.multilevel().add(gobj.multilevel());
             return this;
         },
-        newChild(id, props) {
-            return this.factory().create(this.type().children(), id, props);
-        },
-        addNew(id, props) {
-            const gobj = this.newChild(id, props);
-            this.add(gobj);
-            return gobj;
-        },
         remove(gobj) {
-            return this._multilevel.remove(gobj._multilevel)
-        },
-        toJSON(json) {
-            return this.map(elem => elem.toJSON(json))
-        },
-        fromJSON(json, map) {
-            const globalMultilevelId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelContainer);
-            this._multilevel = map[globalMultilevelId] = map[globalMultilevelId] || this.createMultilevel();
-            json.container.forEach(child => {
-                const obj = this.newChild(child.id, {lazy: true});
-                obj.fromJSON(child, map);
-                this.add(obj)
-            });
+            this.multilevel().remove(gobj.multilevel());
+            return this;
         }
     });
 
-    const Multilevel = {
+    const MultilevelDelegateObject = {
         config: { multilevel: true },
 
-        createMultilevel() {
+        createObject() {
             return new MultilevelGraphObject(this.id, {[this.type()] : this});
+        },
+        objectGlobalId() {
+            return GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelObject);
         },
         initialize({multilevel, lazy}) {
             if (multilevel) {
                 this._multilevel = multilevel;
             } else if (!lazy) {
-                this._multilevel = this.createMultilevel();
+                this._multilevel = this.createObject();
             }
         },
         multilevel() {
             return this._multilevel
         },
-        fromJSON(json, map) {
-            const globalMultilevelId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelObject);
-            this._multilevel = map[globalMultilevelId] = map[globalMultilevelId] || this.createMultilevel();
+        fromJSON(json, pool) {
+            const objectGlobalId = this.objectGlobalId();
+            this._multilevel = pool[objectGlobalId] = pool[objectGlobalId] || this.createObject();
         }
     };
 
@@ -922,21 +896,21 @@
 
     GraphFactory.register({name: 'default', multilevel: true}, {
         Link: Link.extend({
-            $mixins: [Multilevel, LinkMultilevel]
+            $mixins: [MultilevelDelegateObject, LinkMultilevel]
         }),
-        Links: MultilevelDelegateGraphContainer.extend({
+        Links: MultilevelDelegateContainer.extend({
             $mixins: [LinksMultilevel]
         }),
         Node: Node.extend({
-            $mixins: [Multilevel, NodeMultilevel]
+            $mixins: [MultilevelDelegateObject, NodeMultilevel]
         }),
-        Nodes: MultilevelDelegateGraphContainer.extend({
+        Nodes: MultilevelDelegateContainer.extend({
             $mixins: [NodesMultilevel]
         }),
         Graph: Graph.extend({
-            $mixins: [Multilevel, GraphMultilevel]
+            $mixins: [MultilevelDelegateObject, GraphMultilevel]
         }),
-        Graphs: MultilevelDelegateGraphContainer.extend({
+        Graphs: MultilevelDelegateContainer.extend({
             $mixins: [GraphsMultilevel]
         })
     });
@@ -970,76 +944,76 @@
 
     GraphFactory.register({name: 'default', directed: true, multilevel: true}, {
         Link: Link.extend({
-            $mixins: [LinkDirected, Multilevel, LinkMultilevel]
+            $mixins: [LinkDirected, MultilevelDelegateObject, LinkMultilevel]
         }),
         Links: DuoGraphContainer.extend({
-            $mixins: [LinksDirected, Multilevel, LinksMultilevel],
-            Container: MultilevelDelegateGraphContainer.extend({
-                $mixins: [LinksDirected, Multilevel, LinksMultilevel]
+            $mixins: [LinksDirected, MultilevelDelegateObject, LinksMultilevel],
+            Container: MultilevelDelegateContainer.extend({
+                $mixins: [LinksDirected, MultilevelDelegateObject, LinksMultilevel]
             })
         }),
         Node: Node.extend({
-            $mixins: [NodeDirected, Multilevel, NodeMultilevel]
+            $mixins: [NodeDirected, MultilevelDelegateObject, NodeMultilevel]
         }),
-        Nodes: MultilevelDelegateGraphContainer.extend({
-            $mixins: [Directed, Multilevel, NodesMultilevel]
+        Nodes: MultilevelDelegateContainer.extend({
+            $mixins: [Directed, MultilevelDelegateObject, NodesMultilevel]
         }),
         Graph: Graph.extend({
-            $mixins: [Directed, Multilevel, GraphMultilevel]
+            $mixins: [Directed, MultilevelDelegateObject, GraphMultilevel]
         }),
-        Graphs: MultilevelDelegateGraphContainer.extend({
-            $mixins: [Directed, Multilevel, GraphsMultilevel]
+        Graphs: MultilevelDelegateContainer.extend({
+            $mixins: [Directed, MultilevelDelegateObject, GraphsMultilevel]
         })
     });
 
     GraphFactory.register({name: 'default', dual: true, multilevel: true}, {
         Link: Link.extend({
-            $mixins: [Dual, Multilevel, LinkMultilevel]
+            $mixins: [Dual, MultilevelDelegateObject, LinkMultilevel]
         }),
-        Links: MultilevelDelegateGraphContainer.extend({
-            $mixins: [Dual, Multilevel, LinksMultilevel]
+        Links: MultilevelDelegateContainer.extend({
+            $mixins: [Dual, MultilevelDelegateObject, LinksMultilevel]
         }),
         Node: Node.extend({
-            $mixins: [NodeDual, Multilevel, NodeMultilevel]
+            $mixins: [NodeDual, MultilevelDelegateObject, NodeMultilevel]
         }),
         Nodes: DuoGraphContainer.extend({
-            $mixins: [NodesDual, Multilevel, NodesMultilevel],
-            Container: MultilevelDelegateGraphContainer.extend({
-                $mixins: [NodesDual, Multilevel, NodesMultilevel]
+            $mixins: [NodesDual, MultilevelDelegateObject, NodesMultilevel],
+            Container: MultilevelDelegateContainer.extend({
+                $mixins: [NodesDual, MultilevelDelegateObject, NodesMultilevel]
             })
         }),
         Graph: Graph.extend({
-            $mixins: [GraphDual, Multilevel, GraphMultilevel]
+            $mixins: [GraphDual, MultilevelDelegateObject, GraphMultilevel]
         }),
-        Graphs: MultilevelDelegateGraphContainer.extend({
-            $mixins: [Dual, Multilevel, GraphsMultilevel]
+        Graphs: MultilevelDelegateContainer.extend({
+            $mixins: [Dual, MultilevelDelegateObject, GraphsMultilevel]
         })
     });
 
     GraphFactory.register({name: 'default', directed: true, dual: true, multilevel: true}, {
         Link: Link.extend({
-            $mixins: [LinkDirected, Dual, Multilevel, LinkMultilevel]
+            $mixins: [LinkDirected, Dual, MultilevelDelegateObject, LinkMultilevel]
         }),
         Links: DuoGraphContainer.extend({
-            $mixins: [LinksDirected, Dual, Multilevel, LinksMultilevel],
-            Container: MultilevelDelegateGraphContainer.extend({
-                $mixins: [LinksDirected, Dual, Multilevel, LinksMultilevel]
+            $mixins: [LinksDirected, Dual, MultilevelDelegateObject, LinksMultilevel],
+            Container: MultilevelDelegateContainer.extend({
+                $mixins: [LinksDirected, Dual, MultilevelDelegateObject, LinksMultilevel]
             })
         }),
         Node: Node.extend({
-            $mixins: [NodeDirected, NodeDual, Multilevel, NodeMultilevel]
+            $mixins: [NodeDirected, NodeDual, MultilevelDelegateObject, NodeMultilevel]
         }),
         Nodes: DuoGraphContainer.extend({
-            $mixins: [Directed, NodesDual, Multilevel, NodesMultilevel],
-            Container: MultilevelDelegateGraphContainer.extend({
-                $mixins: [Directed, NodesDual, Multilevel, NodesMultilevel]
+            $mixins: [Directed, NodesDual, MultilevelDelegateObject, NodesMultilevel],
+            Container: MultilevelDelegateContainer.extend({
+                $mixins: [Directed, NodesDual, MultilevelDelegateObject, NodesMultilevel]
             })
         }),
         Graph: Graph.extend({
-            $mixins: [Directed, GraphDual, Multilevel, GraphMultilevel]
+            $mixins: [Directed, GraphDual, MultilevelDelegateObject, GraphMultilevel]
         }),
-        Graphs: MultilevelDelegateGraphContainer.extend({
-            $mixins: [Directed, Dual, Multilevel, GraphsMultilevel]
+        Graphs: MultilevelDelegateContainer.extend({
+            $mixins: [Directed, Dual, MultilevelDelegateObject, GraphsMultilevel]
         })
     });
 
