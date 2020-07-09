@@ -439,8 +439,21 @@
         multilevel() {
             return this._container; // this.$super('container');
         },
+        free() {
+            this.multilevel().free();
+            return this;
+        },
         container() {
-            return this.multilevel().map((multilevelElem) => this.elem(multilevelElem))
+            return this.multilevel().map(multilevelElem => this.elem(multilevelElem))
+        },
+        get(index) {
+            return this.elem(this.multilevel().get(index));
+        },
+        indexOf(child) {
+            return this.multilevel().indexOf(child.multilevel());
+        },
+        size() {
+            return this.multilevel().length;
         },
         elem(multilevelObject) { // this method will be overridden for specific type
             const childrenType = this.type().children();

@@ -25,7 +25,7 @@
         return value;
     }
 
-    function _extend(extendingFn, dst, src) {
+    function extendFn(extendingFn, dst, src) {
         for (var prop in src) {
             if (hasOwnProperty.call(src, prop)) {
                 dst[prop] = extendingFn.call(dst[prop], src[prop])
@@ -35,12 +35,12 @@
     }
 
     function extend(dst, src) {
-        return _extend(identity, dst, src)
+        return extendFn(identity, dst, src)
     }
 
     // Recursive extend, will look for object that has the extend method to recursively extend
     function rExtend(dst, src) {
-        return _extend(function (value) {
+        return extendFn(function (value) {
             return this && isFunction(this.extend) ? this.extend(value) : value;
         }, dst, src)
     }
@@ -133,13 +133,23 @@
         }
     });
 
-    // Extensible objects implement extend method that uses prototypical inheritance on objects and compose on functions (which are also objects)
     // Extensible could have been called Composable
     var Extensible = extend(function() {}, {
         extend: function(obj) {
             // in case both are functions then compose otherwise create new object
             var instance = isFunction(this) && isFunction(obj) ? compose(this, obj, this) : Object.create(this);
             return rExtend(instance, obj);
+        },
+        create: function(obj) {
+            return extend(obj, this);
+        }
+    });
+
+    var ReverseExtensible = extend(function() {}, {
+        extend: function(obj) {
+            // in case both are functions then compose otherwise create new object
+            var instance = isFunction(obj) && isFunction(this) ? compose(obj, this, obj) : Object.create(obj);
+            return rExtend(instance, this);
         },
         create: function(obj) {
             return extend(obj, this);
@@ -185,6 +195,7 @@
             Class: Class,
             Enum: Enum,
             Extensible: Extensible,
+            ReverseExtensible: ReverseExtensible,
             uniqueId: uniqueId
         }
     });
