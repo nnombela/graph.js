@@ -41,7 +41,7 @@
         $statics: {
             Types, Direction, Duality,
             UNIQUE_ID_PATTERN: 'g000-1000-0000', // set this to undefined to generate uuidv4
-            GlobalId: (id, type = '') => id ? type + '#' + id : undefined,
+            GlobalId: (id, type) => id ? `${type}#${id}` : id,
         },
 
         $constructor(id, props = {}) {
@@ -51,11 +51,11 @@
 
         config: OOP.Extensible.create({name: 'default'}),
 
-        initialize: OOP.Extensible.create(function({owner}) {
+        initialize: OOP.Composable.create(function({owner}) {
             this.owner = owner;
         }),
 
-        free: OOP.Extensible.create(function() {
+        free: OOP.Composable.create(function() {
             const owner = this.owner;
             if (owner) {
                 this.owner = null;
@@ -82,11 +82,11 @@
         },
 
         // ---- JSON
-        toJSON: OOP.Extensible.create(function() {
+        toJSON: OOP.Composable.create(function() {
             return { id: this.id }
         }),
 
-        fromJSON: OOP.Extensible.create(function(json, pool) {
+        fromJSON: OOP.Pipable.create(function(json, pool) {
             pool[this.globalId()] = this;
         }),
 
@@ -181,9 +181,6 @@
         createContainer() {
             return []  // default implementation is just an array
         },
-        containerGlobalId() {
-            return GraphObject.GlobalId(this.id, 'array');
-        },
         container() {
             return this._container;
         },
@@ -246,8 +243,7 @@
         },
         fromJSON(json, pool) {
             if (!this._container) {
-                const containerGlobalId = this.containerGlobalId();
-                this._container = pool[containerGlobalId] = pool[containerGlobalId] || this.createContainer();
+                this._container = this.createContainer();
             }
             json.container.forEach(child => {
                 const obj = this.newChild(child.id, {lazy: true});
@@ -433,9 +429,6 @@
         createContainer() {
             return new MultilevelGraphContainer(this.id, {[this.type()] : this});
         },
-        containerGlobalId() {
-            return GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelContainer);
-        },
         multilevel() {
             return this._container; // this.$super('container');
         },
@@ -466,6 +459,12 @@
         remove(gobj) {
             this.multilevel().remove(gobj.multilevel());
             return this;
+        },
+        fromJSON(json, pool) {
+            if (!this._container) {
+                const mlContainerGlobalId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelContainer);
+                this._container = pool[mlContainerGlobalId] = pool[mlContainerGlobalId] || this.createContainer();
+            }
         }
     });
 
@@ -474,9 +473,6 @@
 
         createObject() {
             return new MultilevelGraphObject(this.id, {[this.type()] : this});
-        },
-        objectGlobalId() {
-            return GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelObject);
         },
         initialize({multilevel, lazy}) {
             if (multilevel) {
@@ -489,8 +485,10 @@
             return this._multilevel
         },
         fromJSON(json, pool) {
-            const objectGlobalId = this.objectGlobalId();
-            this._multilevel = pool[objectGlobalId] = pool[objectGlobalId] || this.createObject();
+            if (!this._multilevel) {
+                const mlObjectGlobalId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelObject);
+                this._multilevel = pool[mlObjectGlobalId] = pool[mlObjectGlobalId] || this.createObject();
+            }
         }
     };
 
@@ -511,7 +509,7 @@
         type() {
             return Types.Link;
         },
-        checkCanBeBound: OOP.Extensible.create(function(pair) {
+        checkCanBeBound: OOP.Composable.create(function(pair) {
             if (!pair.owner) {
                 throw new Error('Link ' + pair + ' is free, does not belong to a node');
             }

@@ -136,20 +136,25 @@
     // Extensible could have been called Composable
     var Extensible = extend(function() {}, {
         extend: function(obj) {
-            // in case both are functions then compose otherwise create new object
-            var instance = isFunction(this) && isFunction(obj) ? compose(this, obj, this) : Object.create(this);
-            return rExtend(instance, obj);
+            return rExtend(Object.create(this), obj);
         },
         create: function(obj) {
             return extend(obj, this);
         }
     });
 
-    var ReverseExtensible = extend(function() {}, {
+    var Composable = extend(function() {}, {
         extend: function(obj) {
-            // in case both are functions then compose otherwise create new object
-            var instance = isFunction(obj) && isFunction(this) ? compose(obj, this, obj) : Object.create(obj);
-            return rExtend(instance, this);
+            return compose(this, obj, rExtend(Object.create(this), obj));
+        },
+        create: function(obj) {
+            return extend(obj, this);
+        }
+    });
+
+    var Pipable = extend(function() {}, {
+        extend: function(obj) {
+            return compose(obj, this, rExtend(Object.create(obj), this));
         },
         create: function(obj) {
             return extend(obj, this);
@@ -195,7 +200,8 @@
             Class: Class,
             Enum: Enum,
             Extensible: Extensible,
-            ReverseExtensible: ReverseExtensible,
+            Composable: Composable,
+            Pipable: Pipable,
             uniqueId: uniqueId
         }
     });
