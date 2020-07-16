@@ -55,12 +55,8 @@
             this.owner = owner;
         }),
 
-        free: OOP.Composable.create(function() {
-            const owner = this.owner;
-            if (owner) {
-                this.owner = null;
-                owner.free(this);
-            }
+        free: OOP.Pipable.create(function() {
+            this.owner && this.owner.free(this)
         }),
         globalId() {
             return GraphObject.GlobalId(this.id, this.type());
@@ -184,8 +180,12 @@
         container() {
             return this._container;
         },
-        free() {
-            this.forEach(child => this.remove(child))
+        free(gobj) {
+            if (gobj) {
+                this.remove(gobj);
+            } else {
+                this.forEach(child => this.remove(child))
+            }
         },
         get(index) {
             return this.container()[index];
@@ -232,11 +232,18 @@
         },
         remove(gobj) {
             const idx = this.indexOf(gobj);
-            if (idx !== -1) {
-                this.container().splice(idx, 1);
-                gobj.free();
+            if (idx === -1) {
+                return this
             }
-            return idx;
+            if (idx === 0) {
+                this._container.shift()
+            } else if (idx === this._container.length - 1) {
+                this._container.pop()
+            } else  {
+                this._container.splice(idx, 1)
+            }
+            gobj.owner = null;
+            return this;
         },
         toJSON() {
             return this.map(elem => elem.toJSON())
@@ -446,7 +453,7 @@
             return this.multilevel().indexOf(child.multilevel());
         },
         size() {
-            return this.multilevel().length;
+            return this.multilevel().size();
         },
         elem(multilevelObject) { // this method will be overridden for specific type
             const childrenType = this.type().children();
