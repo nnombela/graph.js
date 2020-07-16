@@ -467,17 +467,14 @@
         empty() {
             return this.multilevel().empty();
         },
-        callElemFunc(func) {
-            return (elem, ...rest) => func.call(this, this.elem(elem), ...rest)
-        },
         forEach(func) {
-            this.multilevel().forEach(this.callElemFunc(func), this);
+            this.container().forEach(func, this);
         },
         map(func) {
-            return this.multilevel().map(this.callElemFunc(func), this);
+            return this.container().map(func, this);
         },
         find(func) {
-            return this.multilevel().find(this.callElemFunc(func), this);
+            return this.container().find(func, this);
         },
         add(child) {
             this.multilevel().add(child.multilevel());
