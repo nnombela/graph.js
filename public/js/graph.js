@@ -167,18 +167,19 @@
     const GraphContainer = GraphObject.extend({
         $mixins: [Iterable, Accessible],
 
-        initialize() {
-            this._container = []
+        initialize({lazy}) {
+            if (!lazy) {
+                this._container = this.createContainer()
+            }
+        },
+        createContainer() {
+            return []
         },
         container() {
             return this._container
         },
         free(child) {
-            if (child) {
-                this.remove(child);
-            } else {
-                this.forEach(child => this.remove(child))
-            }
+            return child ? this.remove(child) : this.forEach(child => this.remove(child))
         },
         get(index) {
             return this._container[index];
@@ -190,16 +191,17 @@
             return this.size() === 0;
         },
         forEach(func) {
-            this._container.forEach(func, this);
+            this.container().forEach(func, this);
+            return this;
         },
         map(func) {
-            return this._container.map(func, this);
+            return this.container().map(func, this);
         },
         indexOf(child) {
-            return this._container.indexOf(child);
+            return this.container().indexOf(child);
         },
         find(func) {
-            return this._container.find(func, this);
+            return this.container().find(func, this);
         },
         contains(child) {
             return this.indexOf(child) !== -1;
@@ -224,15 +226,15 @@
             return child;
         },
         remove(child) {
-            if (child.owner && child.owner !== this) {
-                throw new Error('Graph object: ' + child + ' does not belong to this container: ' + this)
-            }
             const idx = this.indexOf(child);
+            if (idx !== -1) {
+                return this
+            }
             if (idx === 0) {
                 this._container.shift()
             } else if (idx === this.size() - 1) {
                 this._container.pop()
-            } else  if (idx !== -1) {
+            } else {
                 this._container.splice(idx, 1)
             }
             child.owner = null;
@@ -242,6 +244,9 @@
             return this.map(elem => elem.toJSON())
         },
         fromJSON(json, pool) {
+            if (this._container) {
+                this._container = this.createContainer(pool)
+            }
             json.container.forEach(jsonChild => {
                 const child = this.newChild(jsonChild.id, {lazy: true});
                 child.fromJSON(jsonChild, pool);
@@ -277,6 +282,7 @@
         forEach(func) {
             this[0].forEach(func,  this);
             this[1].forEach(func, this);
+            return this;
         },
         map(func) {
             return this.container().map(func, this)
@@ -297,13 +303,19 @@
         addNew(id, enumerator) {
             return this.graphContainer(enumerator || {ordinal: 0}).addNew(id);
         },
-        remove(gobj) {
-            const idx = this[0].remove(gobj);
-            return idx !== -1 ? idx : this[1].remove(gobj);
+        remove(child) {
+            this[0].remove(child);
+            if (gobj.owner) {
+                this[1].remove(child);
+            }
+            return this
         },
-        free() {
-            this[0].free();
-            this[1].free();
+        free(child) {
+            this[0].free(child);
+            if (!child || child.owner) {
+                this[1].free(child);
+            }
+            return this;
         },
         toJSON() {
             return {
@@ -424,30 +436,30 @@
         }
     });
 
-    const MultilevelDelegateContainer = GraphObject.extend({
-        $mixins: [Iterable, Accessible],
+    const MultilevelDelegateContainer = GraphContainer.extend({
         config: { multilevel: true },
 
-        createContainer() {
+        createMultilevelContainer() {
             return this.factory().createMultilevelContainer(this.id, {[this.type()] : this});
         },
-        initialize({multilevel, lazy}) {
+        createContainer(pool) {
+            if (pool) {
+                const mlContainerGlobalId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelContainer);
+                return pool[mlContainerGlobalId] || (pool[mlContainerGlobalId] = this.createMultilevelContainer());
+            }
+            return this.createMultilevelContainer()
+        },
+        initialize({multilevel}) {
             if (multilevel) {
-                this._multilevel = multilevel;
-            } else if (!lazy) {
-                this._multilevel = this.createContainer();
+                this._container = multilevel;
             }
         },
         multilevel() {
-            return this._multilevel;
+            return this._container;
         },
         elem(multilevelObject) { // this method will be overridden for specific type
             const childrenType = this.type().children();
             return MultilevelGraphObject[childrenType.toString()].apply(multilevelObject)
-        },
-        free(child) {
-            this.multilevel().free(child);
-            return this;
         },
         container() {
             return this.multilevel().map(multilevelElem => this.elem(multilevelElem))
@@ -461,20 +473,10 @@
         contains(child) {
             return this.multilevel().contains(child.multilevel());
         },
-        size() {
-            return this.multilevel().size();
-        },
-        empty() {
-            return this.multilevel().empty();
-        },
-        forEach(func) {
-            this.container().forEach(func, this);
-        },
-        map(func) {
-            return this.container().map(func, this);
-        },
-        find(func) {
-            return this.container().find(func, this);
+
+        free(child) {
+            this.multilevel().free(child.multilevel());
+            return this;
         },
         add(child) {
             this.multilevel().add(child.multilevel());
@@ -485,39 +487,24 @@
             return this;
         },
         newChild(id, props) {
-            const mlChild = this.multilevel().newChild(id, props);
-            return this.elem(mlChild);
+            return this.elem(this.multilevel().newChild(id, props));
         },
         addNew(id, props) {
             return this.elem(this.multilevel().addNew(id, props));
-        },
-        toJSON() {
-            return this.map(elem => elem.toJSON())
-        },
-        fromJSON(json, pool) {
-            if (!this._multilevel) {
-                const mlContainerGlobalId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelContainer);
-                this._multilevel = pool[mlContainerGlobalId] = pool[mlContainerGlobalId] || this.createContainer();
-            }
-            json.container.forEach(jsonChild => {
-                const child = this.newChild(jsonChild.id, {lazy: true});
-                child.fromJSON(jsonChild, pool);
-                this.add(child)
-            });
         }
     });
 
     const MultilevelDelegateObject = {
         config: { multilevel: true },
 
-        createObject() {
+        createMultilevelObject() {
             return this.factory().createMultilevelObject(this.id, {[this.type()] : this})
         },
         initialize({multilevel, lazy}) {
             if (multilevel) {
                 this._multilevel = multilevel;
             } else if (!lazy) {
-                this._multilevel = this.createObject();
+                this._multilevel = this.createMultilevelObject();
             }
         },
         multilevel() {
@@ -526,7 +513,7 @@
         fromJSON(json, pool) {
             if (!this._multilevel) {
                 const mlObjectGlobalId = GraphObject.GlobalId(this.id, MultilevelTypes.MultilevelObject);
-                this._multilevel = pool[mlObjectGlobalId] = pool[mlObjectGlobalId] || this.createObject();
+                this._multilevel = pool[mlObjectGlobalId] || (pool[mlObjectGlobalId] = this.createMultilevelObject());
             }
         }
     };
